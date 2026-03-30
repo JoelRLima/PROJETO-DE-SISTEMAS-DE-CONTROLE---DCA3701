@@ -960,26 +960,33 @@ function encontrarKCritico(linhasRouth) {
   const coluna0 = linhasRouth.map(linha => linha[0].fn);
   const PASSOS  = 6000;
   const KMAX    = 50000;
+  const encontrados = [];
 
   for (let i = 1; i <= PASSOS; i++) {
     const K     = i * KMAX / PASSOS;
     const Kprev = (i - 1) * KMAX / PASSOS;
 
-    for (const fn of coluna0) {
+    for (let r = 0; r < coluna0.length; r++) {
+      const fn = coluna0[r];
       const atual    = fn(K);
       const anterior = fn(Kprev);
-      if (isFinite(atual) && isFinite(anterior) && anterior * atual < 0) {
+      if (isFinite(atual) && isFinite(anterior) && anterior * atual <= 0 && (anterior !== 0 || atual !== 0)) {
         // Refina com bissecção
         let lo = Kprev, hi = K;
         for (let b = 0; b < 60; b++) {
           const mid = (lo + hi) / 2;
           if (fn(lo) * fn(mid) <= 0) hi = mid; else lo = mid;
         }
-        return (lo + hi) / 2;
+        const kFound = (lo + hi) / 2;
+        // Evita duplicatas pela mesma raiz ou raízes muito próximas
+        if (!encontrados.some(e => Math.abs(e.k - kFound) < 0.1)) {
+          encontrados.push({ k: kFound, linha: r });
+        }
       }
     }
   }
-  return null;  // não encontrou cruzamento
+  encontrados.sort((a,b) => a.k - b.k);
+  return encontrados.length > 0 ? encontrados : null;
 }
 
 /* ============================================================
@@ -1223,24 +1230,14 @@ ${resultado8Html}
   /* ── PASSO 9 — Critério de Routh-Hurwitz ── */
   // Constrói a tabela com os coeficientes reais (parte real dos complexos)
   const linhasRouth = construirTabelaRouth(D_real, N_real);
-  const kCrit = encontrarKCritico(linhasRouth);
+  const kCrits = encontrarKCritico(linhasRouth);
 
-  // Monta as linhas HTML da tabela
-  // (marca a linha cuja primeira célula muda de sinal em K=kCrit)
-  let indiceLinhaK = -1;
-  if (kCrit !== null) {
-    for (let i = 0; i < linhasRouth.length; i++) {
-      const fn = linhasRouth[i][0].fn;
-      if (isFinite(fn(0)) && fn(kCrit - 0.5) * fn(kCrit + 0.5) < 0) {
-        indiceLinhaK = i; break;
-      }
-    }
-  }
+  const indicesLinhasK = kCrits ? kCrits.map(obj => obj.linha) : [];
 
   let linhasHtml = '';
   for (let i = 0; i < linhasRouth.length; i++) {
     const potencia = grauCar - i;
-    const cls = i === indiceLinhaK ? ' class="linha-critica"' : '';
+    const cls = indicesLinhasK.includes(i) ? ' class="linha-critica"' : '';
     const cels = linhasRouth[i].slice(0, 4).map(cel => `<td>${cel.lit}</td>`).join('');
     linhasHtml += `<tr${cls}><th>s${superscript(potencia)}</th>${cels}</tr>`;
   }
@@ -1265,59 +1262,74 @@ ${resultado8Html}
 
   // Resultado de estabilidade
   let estabilidadeHtml;
-  if (!kCrit) {
-    estabilidadeHtml = `<div class="res-box verde">✓ Todos os elementos da 1ª coluna são positivos para K > 0.\nO LGR não cruza o eixo imaginário.\nSistema estável para todo K > 0.</div>`;
-  } else {
-    // Tenta encontrar a frequência de cruzamento ω substituindo s = jω
-    let omegaCruz = null;
-    for (let i = 1; i <= 50000; i++) {
-      const om  = i * 500 / 50000;
-      const Ks  = C.div(C.neg(P.eval(D, C.c(0, om))), P.eval(N, C.c(0, om)));
-      if (Math.abs(Ks.re - kCrit) < kCrit * 0.02 && Math.abs(Ks.im) < 0.02) {
-        omegaCruz = om; break;
-      }
+  if (!kCrits || kCrits.length === 0) {
+    // Testa apenas em K > 0 (ex: 10) para ver se é 100% estável ou 100% instável
+    const instavelSempre = linhasRouth.some(linha => { const v = linha[0].fn(10); return isFinite(v) && v <= 0; });
+    if (instavelSempre) {
+      estabilidadeHtml = `<div class="res-box vermelho">Nenhum cruzamento para K > 0 encontrado, porém existem raízes com parte real positiva (1ª coluna possui coeficientes <= 0).\nSistema instável para K > 0.</div>`;
+    } else {
+      estabilidadeHtml = `<div class="res-box verde">✓ Todos os elementos da 1ª coluna são positivos para K > 0.\nO LGR não cruza o eixo imaginário.\nSistema estável para todo K > 0.</div>`;
     }
-
-    // Polinômio auxiliar: vem da linha imediatamente acima da linha crítica
-    let auxStr = '';
-    if (indiceLinhaK > 0) {
-      const linhaAux = linhasRouth[indiceLinhaK - 1];
-      const potAux   = grauCar - (indiceLinhaK - 1);
-
-      // Monta string do polinômio auxiliar
-      const termosAux = linhaAux.map((cel, j) => {
-        const pot = potAux - 2 * j;
-        if (pot < 0) return null;
-        const valK = cel.fn(kCrit);
-        if (Math.abs(valK) < 1e-6) return null;
-        const c = fmtNum(valK);
-        if (pot === 0) return c;
-        if (pot === 1) return `${c}s`;
-        return `${c}·s${superscript(pot)}`;
-      }).filter(Boolean).join(' + ');
-
-      // Reconstrói o polinômio completo (com zeros nos graus ausentes)
-      // para passar ao algoritmo de busca de raízes
-      const auxPolyCompleto = [];
-      for (let deg = potAux; deg >= 0; deg--) {
-        const diff = potAux - deg;
-        if (diff % 2 === 0) {
-          const jIdx = diff / 2;
-          auxPolyCompleto.push(jIdx < linhaAux.length
-            ? C.c(linhaAux[jIdx].fn(kCrit))
-            : C.c(0));
-        } else {
-          auxPolyCompleto.push(C.c(0));   // grau ímpar ausente na linha de Routh
+  } else {
+    const blocosCriticos = kCrits.map(({k: kCrit, linha: indiceLinhaK}) => {
+      // Tenta encontrar a frequência de cruzamento ω substituindo s = jω
+      let omegaCruz = null;
+      for (let i = 1; i <= 50000; i++) {
+        const om  = i * 500 / 50000;
+        const Ks  = C.div(C.neg(P.eval(D, C.c(0, om))), P.eval(N, C.c(0, om)));
+        if (Math.abs(Ks.re - kCrit) < Math.max(kCrit * 0.05, 0.05) && Math.abs(Ks.im) < 0.05) {
+          omegaCruz = om; break;
         }
       }
 
-      const raizesAux = findRoots(auxPolyCompleto);
-      const raizesAuxStr = raizesAux.map(r => `s = ${C.fmt(r, 4)}`).join('\n  ');
+      // Polinômio auxiliar: vem da linha imediatamente acima da linha crítica
+      let auxStr = '';
+      if (indiceLinhaK > 0) {
+        const linhaAux = linhasRouth[indiceLinhaK - 1];
+        const potAux   = grauCar - (indiceLinhaK - 1);
 
-      auxStr = `\nPolinômio auxiliar (K = ${fmtNum(kCrit, 4)}):\n  ${termosAux} = 0\nRaízes do polinômio auxiliar:\n  ${raizesAuxStr}`;
+        // Monta string do polinômio auxiliar
+        const termosAux = linhaAux.map((cel, j) => {
+          const pot = potAux - 2 * j;
+          if (pot < 0) return null;
+          const valK = cel.fn(kCrit);
+          if (Math.abs(valK) < 1e-6) return null;
+          const c = fmtNum(valK);
+          if (pot === 0) return c;
+          if (pot === 1) return `${c}s`;
+          return `${c}·s${superscript(pot)}`;
+        }).filter(Boolean).join(' + ');
+
+        const auxPolyCompleto = [];
+        for (let deg = potAux; deg >= 0; deg--) {
+          const diff = potAux - deg;
+          if (diff % 2 === 0) {
+            const jIdx = diff / 2;
+            auxPolyCompleto.push(jIdx < linhaAux.length ? C.c(linhaAux[jIdx].fn(kCrit)) : C.c(0));
+          } else {
+            auxPolyCompleto.push(C.c(0));
+          }
+        }
+        const raizesAux = findRoots(auxPolyCompleto);
+        const raizesAuxStr = raizesAux.map(r => `s = ${C.fmt(r, 4)}`).join('\n  ');
+
+        auxStr = `\nPolinômio auxiliar (K = ${fmtNum(kCrit, 4)}):\n  ${termosAux} = 0\nRaízes do polinômio auxiliar:\n  ${raizesAuxStr}`;
+      }
+      return `⚠ K crítico = ${fmtNum(kCrit, 4)}${omegaCruz !== null ? `\nCruzamento em s = ±${fmtNum(omegaCruz, 4)}j  (ω = ${fmtNum(omegaCruz, 4)} rad/s)` : ''}${auxStr}`;
+    });
+
+    const ks = kCrits.map(c => c.k);
+    const testPoints = [1e-4, ...ks, Infinity];
+    let faixas = [];
+    for (let i = 0; i < testPoints.length - 1; i++) {
+        const kTest = i === testPoints.length - 2 ? testPoints[i] + 1 : (testPoints[i] + testPoints[i+1]) / 2;
+        const allPositive = linhasRouth.every(linha => { const v = linha[0].fn(kTest); return isFinite(v) && v > 0; });
+        const k1 = i === 0 ? '0' : fmtNum(testPoints[i], 4);
+        const k2 = i === testPoints.length - 2 ? '∞' : fmtNum(testPoints[i+1], 4);
+        faixas.push(`  ${k1} < K < ${k2}  →  ${allPositive ? 'ESTÁVEL' : 'INSTÁVEL'}`);
     }
 
-    estabilidadeHtml = `<div class="res-box amarelo">⚠ K crítico = ${fmtNum(kCrit, 4)}${omegaCruz ? `\nCruzamento em s = ±${fmtNum(omegaCruz, 4)}j  (ω = ${fmtNum(omegaCruz, 4)} rad/s)` : ''}${auxStr}\n\nPara K > ${fmtNum(kCrit, 4)} o sistema fica instável.</div>`;
+    estabilidadeHtml = `<div class="res-box amarelo">${blocosCriticos.join('\n\n')}\n\nResumo interativo (faixas de K):\n${faixas.join('\n')}</div>`;
   }
 
   const htmlP9 = `
