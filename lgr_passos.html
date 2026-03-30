@@ -242,6 +242,83 @@ body{padding:14px;max-width:500px;margin:0 auto}
 .ponto-resultado.fora { border-left-color:var(--red); color:var(--red) }
 /* Amarelo = aviso / caso especial */
 .ponto-resultado.aviso{ border-left-color:var(--amb) }
+
+/* ── Blocos de equação e resultado (usados nos passos HTML) ── */
+
+/* Bloco de equação com borda lateral azul */
+.eq-bloco {
+  background: var(--s2);
+  border-left: 3px solid var(--acc);
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+  margin: 8px 0;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: var(--t1);
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+
+/* Caixa de resultado colorida */
+.res-box {
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.res-box.verde   { background: rgba(63,185,80,.10);  border: 1px solid rgba(63,185,80,.30);  color: var(--green); }
+.res-box.azul    { background: rgba(88,166,255,.10); border: 1px solid rgba(88,166,255,.30); color: var(--acc);   }
+.res-box.amarelo { background: rgba(210,153,34,.10); border: 1px solid rgba(210,153,34,.30); color: var(--amb);   }
+.res-box.vermelho{ background: rgba(248,81,73,.10);  border: 1px solid rgba(248,81,73,.30);  color: var(--red);   }
+
+/* Subtítulo de seção dentro de um passo */
+.sub-secao {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--t4);
+  margin: 14px 0 5px;
+}
+
+/* Tabela de Routh */
+.routh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  margin: 8px 0;
+}
+.routh-table th {
+  color: var(--t3);
+  text-align: right;
+  padding: 5px 10px 5px 4px;
+  font-weight: 400;
+  border-right: 1px solid var(--b);
+  white-space: nowrap;
+  font-size: 12px;
+}
+.routh-table td {
+  padding: 5px 10px;
+  color: var(--t1);
+  text-align: center;
+}
+.routh-table tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+.routh-table tr.linha-critica th,
+.routh-table tr.linha-critica td   { color: var(--amb); }
+
+/* Container de passos com HTML rico */
+.step-body-html {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--t2);
+  line-height: 1.75;
+}
+.step-body-html p { margin-bottom: 8px; }
+.step-body-html p:last-child { margin-bottom: 0; }
 </style>
 </head>
 <body>
@@ -265,19 +342,19 @@ body{padding:14px;max-width:500px;margin:0 auto}
     </div>
 
     <div class="field">
-      <label>Numerador N(s) — coeficientes do maior para o menor grau</label>
-      <input id="in" type="text" placeholder="ex: 1 20  →  (s + 20)"
+      <label>Numerador N(s) — expressão ou coeficientes</label>
+      <input id="in" type="text" placeholder="ex: s+20  ou  1 20"
              autocomplete="off" autocorrect="off" autocapitalize="none"
              oninput="previewPoly(this.value,'prev-n')">
-      <div class="hint">Espaço ou vírgula entre coeficientes · "1 20" = s+20 · "1 0" = s</div>
+      <div class="hint">Expressão: "s+20", "(s+1)(s+2)", "s^2+3s+2" · Ou coeficientes: "1 20"</div>
       <div id="prev-n" class="poly-prev"></div>
     </div>
     <div class="field">
-      <label>Denominador D(s) — coeficientes do maior para o menor grau</label>
-      <input id="id" type="text" placeholder="ex: 1 4 0  →  (s² + 4s)"
+      <label>Denominador D(s) — expressão ou coeficientes</label>
+      <input id="id" type="text" placeholder="ex: (s^2+4s)  ou  s(s+4)"
              autocomplete="off" autocorrect="off" autocapitalize="none"
              oninput="previewPoly(this.value,'prev-d')">
-      <div class="hint">"1 4 0" = s²+4s · "1 3 2" = (s+1)(s+2) · não esqueça os zeros!</div>
+      <div class="hint">Expressão: "s(s+4)", "(s^3+2s^2+s)(s+2)" · Ou coeficientes: "1 4 0"</div>
       <div id="prev-d" class="poly-prev"></div>
     </div>
     <div class="field">
@@ -288,19 +365,19 @@ body{padding:14px;max-width:500px;margin:0 auto}
 
     <div class="exs">
       <div class="exs-lbl">Exemplos do material:</div>
-      <button class="ex" onclick="setEx('1 20','1 4 0','15')">
-        K(s+20)/(s²+4s)
+      <button class="ex" onclick="setEx('s+20','s(s+4)','15')">
+        K(s+20)/s(s+4)
         <span>Ex. do enunciado</span>
       </button>
-      <button class="ex" onclick="setEx('1','1 3 2 0','20')">
+      <button class="ex" onclick="setEx('1','s(s+1)(s+2)','20')">
         K/[s(s+1)(s+2)]
-        <span>2 pólos + 1 zero real</span>
+        <span>3 pólos reais</span>
       </button>
-      <button class="ex" onclick="setEx('1 3','1 6 5 0 0','20')">
+      <button class="ex" onclick="setEx('s+3','s^2(s+1)(s+5)','20')">
         K(s+3)/[s²(s+1)(s+5)]
         <span>4 pólos + 1 zero</span>
       </button>
-      <button class="ex" onclick="setEx('1','1 2 5 0','12')">
+      <button class="ex" onclick="setEx('1','s(s^2+2s+5)','12')">
         K/[s(s²+2s+5)]
         <span>Pólos complexos</span>
       </button>
@@ -587,6 +664,129 @@ function parseCoeffs(texto) {
 }
 
 /* ============================================================
+   PARSER DE EXPRESSÕES POLINOMIAIS
+   Aceita formas fatoradas: "(s^2 + s)(s+2)", "s(s+1)(s+2)"
+   Também aceita polinômios expandidos: "s^3 + 2s^2 + s"
+   E a forma antiga de coeficientes: "1 2 1 0"
+============================================================ */
+
+// Divide uma expressão em fatores (grupos entre parênteses ou termos soltos)
+// Ex: "(s^2+s)(s+2)" → ["s^2+s", "s+2"]
+// Ex: "s(s+1)"       → ["s", "s+1"]
+function _splitFactors(str) {
+  const factors = [];
+  let i = 0;
+  let current = '';
+
+  while (i < str.length) {
+    if (str[i] === '(') {
+      // Empurra o que acumulou fora dos parênteses como fator separado
+      if (current.trim()) { factors.push(current.trim()); current = ''; }
+      // Encontra o parêntese de fechamento correspondente
+      let depth = 1, j = i + 1;
+      while (j < str.length && depth > 0) {
+        if (str[j] === '(') depth++;
+        if (str[j] === ')') depth--;
+        j++;
+      }
+      factors.push(str.slice(i + 1, j - 1));
+      i = j;
+    } else if (str[i] === '*') {
+      // '*' explícito como separador de fatores
+      if (current.trim()) { factors.push(current.trim()); current = ''; }
+      i++;
+    } else {
+      current += str[i];
+      i++;
+    }
+  }
+  if (current.trim()) factors.push(current.trim());
+  return factors.filter(f => f.trim() !== '');
+}
+
+// Analisa um único polinômio expandido como "s^3 + 2s^2 + s + 1"
+// Devolve array de coeficientes complexos do maior para o menor grau
+function _parseSinglePoly(expr) {
+  expr = expr.replace(/\s+/g, '');
+  if (!expr) return [C.c(1)];
+
+  // Sem 's' → constante numérica
+  if (!expr.toLowerCase().includes('s')) {
+    const v = parseFloat(expr);
+    if (isNaN(v)) throw new Error(`Não entendi "${expr}" como polinômio`);
+    return [C.c(v)];
+  }
+
+  // Adiciona '+' no início se o primeiro caractere não for sinal
+  if (expr[0] !== '-' && expr[0] !== '+') expr = '+' + expr;
+
+  // Captura termos com sinal: ex "+2s^3", "-s", "+4"
+  const termRe = /[+-][^+-]+/g;
+  const termStrs = expr.match(termRe) || [];
+
+  const coeffMap = {};
+
+  for (const term of termStrs) {
+    const sign = term[0] === '-' ? -1 : 1;
+    let t = term.slice(1).toLowerCase(); // remove o sinal
+    if (!t) continue;
+
+    if (t.includes('s')) {
+      const sIdx = t.indexOf('s');
+      let coefStr = t.slice(0, sIdx).replace(/\*$/, ''); // remove * final
+      const afterS  = t.slice(sIdx + 1);
+
+      let coef = (coefStr === '' || coefStr === undefined) ? 1 : parseFloat(coefStr);
+      if (isNaN(coef)) coef = 1;
+
+      let deg;
+      if      (afterS === '')           deg = 1;
+      else if (afterS[0] === '^')       deg = parseInt(afterS.slice(1), 10);
+      else                              deg = 1;
+
+      if (isNaN(deg)) throw new Error(`Expoente inválido em "${term}"`);
+      coeffMap[deg] = (coeffMap[deg] || 0) + sign * coef;
+    } else {
+      const val = parseFloat(t);
+      if (!isNaN(val)) coeffMap[0] = (coeffMap[0] || 0) + sign * val;
+    }
+  }
+
+  const maxDeg = Object.keys(coeffMap).length
+    ? Math.max(...Object.keys(coeffMap).map(Number))
+    : 0;
+
+  const arr = [];
+  for (let d = maxDeg; d >= 0; d--) {
+    arr.push(C.c(coeffMap[d] || 0));
+  }
+  return arr.length ? arr : [C.c(0)];
+}
+
+// Ponto de entrada principal do parser
+// Retorna array de coeficientes complexos do maior para o menor grau
+function parsePolyExpr(texto) {
+  const str = texto.replace(/−/g, '-').trim();
+
+  // Se não contém 's', usa o modo legado de coeficientes numéricos
+  if (!/s/i.test(str)) {
+    return parseCoeffs(str).map(c => C.c(c));
+  }
+
+  // Modo expressão: divide em fatores e multiplica
+  const normalizado = str.replace(/\s+/g, '').toLowerCase();
+  const fatores = _splitFactors(normalizado);
+
+  if (!fatores.length) throw new Error('Expressão vazia');
+
+  let result = [C.c(1)];
+  for (const f of fatores) {
+    result = P.mul(result, _parseSinglePoly(f));
+  }
+  return result;
+}
+
+/* ============================================================
    UTILITÁRIOS DO LUGAR GEOMÉTRICO DAS RAÍZES (LGR)
 ============================================================ */
 
@@ -618,6 +818,171 @@ function calcularPassoDeGrade(valor) {
 const niceStep = calcularPassoDeGrade;
 
 /* ============================================================
+   FORMATAÇÃO E ÁLGEBRA AUXILIAR PARA EXIBIÇÃO DOS PASSOS
+============================================================ */
+
+// Formata número removendo zeros desnecessários ao final
+function fmtNum(x, casas = 4) {
+  return String(+x.toFixed(casas));
+}
+
+// Formata expressão linear em K: "a + bK", "−K", "3", "2K", etc.
+function fmtCoeficienteK(a, b) {
+  const aZero = Math.abs(a) < 1e-8;
+  const bZero = Math.abs(b) < 1e-8;
+
+  if (aZero && bZero) return '0';
+  if (bZero)          return fmtNum(a);
+
+  // Parte do K: "K", "−K", "2K", "−2K"
+  const partK = Math.abs(b - 1)  < 1e-9 ? 'K'
+              : Math.abs(b + 1)  < 1e-9 ? '−K'
+              : b > 0            ? `${fmtNum(b)}K`
+              :                    `${fmtNum(b)}K`;   // negativo já tem sinal no fmtNum
+
+  if (aZero) return partK;
+  return b > 0 ? `${fmtNum(a)} + ${partK}` : `${fmtNum(a)} ${partK}`;
+}
+
+// Converte raízes para string de fatores: "(s + 2)(s − 1)(s²+2s+5)"
+function fatoresStr(raizes) {
+  if (!raizes.length) return '1';
+
+  // Agrupa conjugados para escrever fatores quadráticos quando possível
+  const usados = new Set();
+  const fatores = [];
+
+  for (let i = 0; i < raizes.length; i++) {
+    if (usados.has(i)) continue;
+    const r = raizes[i];
+
+    if (Math.abs(r.im) < 1e-4) {
+      // Raiz real
+      const re = +r.re.toFixed(4);
+      if (Math.abs(re) < 1e-8) fatores.push('s');
+      else if (re < 0)          fatores.push(`(s + ${fmtNum(-re)})`);
+      else                      fatores.push(`(s − ${fmtNum(re)})`);
+    } else {
+      // Procura conjugado
+      const conj = raizes.findIndex((q, j) => !usados.has(j) && j !== i &&
+        Math.abs(q.re - r.re) < 1e-4 && Math.abs(q.im + r.im) < 1e-4);
+
+      if (conj >= 0) {
+        usados.add(conj);
+        // Escreve (s² − 2σs + σ²+ω²)
+        const sigma  = +r.re.toFixed(4);
+        const omega  = +Math.abs(r.im).toFixed(4);
+        const b      = +(-2 * sigma).toFixed(4);
+        const c      = +(sigma * sigma + omega * omega).toFixed(4);
+        const bStr   = b === 0 ? '' : b > 0 ? ` + ${b}s` : ` − ${fmtNum(-b)}s`;
+        fatores.push(`(s²${bStr} + ${c})`);
+      } else {
+        // Complexo sem par (incomum)
+        const re   = +r.re.toFixed(4);
+        const sign = r.im >= 0 ? '+' : '−';
+        fatores.push(`(s − ${re} ${sign} ${fmtNum(Math.abs(r.im))}j)`);
+      }
+    }
+    usados.add(i);
+  }
+  return fatores.join('');
+}
+
+// Constrói tabela de Routh para D(s) + K·N(s) = 0.
+// Retorna array de linhas; cada linha é array de { fn: K=>número, lit: string }.
+function construirTabelaRouth(D_real, N_real) {
+  const n     = D_real.length - 1;
+  const nDiff = D_real.length - N_real.length;
+  const N_pad = [...new Array(Math.max(0, nDiff)).fill(0), ...N_real];
+
+  const celZero = { fn: () => 0, lit: '0' };
+
+  // Coeficientes do polinômio característico: c[i](K) = D[i] + K·N_pad[i]
+  const cefsChar = D_real.map((d, i) => {
+    const nb = N_pad[i] || 0;
+    return {
+      fn:  K => d + K * nb,
+      lit: fmtCoeficienteK(d, nb)
+    };
+  });
+
+  // Linha 0: posições pares → s^n, s^{n-2}, ...
+  // Linha 1: posições ímpares → s^{n-1}, s^{n-3}, ...
+  const linhas = [
+    cefsChar.filter((_, i) => i % 2 === 0),
+    cefsChar.filter((_, i) => i % 2 === 1),
+  ];
+
+  // Equaliza comprimentos das duas primeiras linhas com zeros à direita
+  while (linhas[0].length > linhas[1].length) linhas[1].push(celZero);
+  while (linhas[1].length > linhas[0].length) linhas[0].push(celZero);
+
+  // Linhas 2 em diante: fórmula padrão de Routh
+  for (let row = 2; row <= n; row++) {
+    const A = linhas[row - 2];   // linha duas acima
+    const B = linhas[row - 1];   // linha imediatamente acima
+    const novaLinha = [];
+
+    for (let col = 0; col < A.length - 1; col++) {
+      const fn = K => {
+        const b0 = B[0].fn(K);
+        if (Math.abs(b0) < 1e-12) return NaN;
+        const aCol = (A[col + 1] || celZero).fn(K);
+        const bCol = (B[col + 1] || celZero).fn(K);
+        return (b0 * aCol - A[0].fn(K) * bCol) / b0;
+      };
+
+      // Testa se a célula é linear em K: amostra em 0, 1, 2
+      const v0 = fn(0), v1 = fn(1), v2 = fn(2);
+      let lit = '?';
+      if (isFinite(v0) && isFinite(v1) && isFinite(v2)) {
+        const curvatura = Math.abs((v2 - v1) - (v1 - v0));
+        if (curvatura < 1e-4) {
+          // Linear em K → pode expressar como "a + bK"
+          lit = fmtCoeficienteK(v0, v1 - v0);
+        } else {
+          // Não-linear (raro em sistemas de ordem baixa): mostra valor em K=0
+          lit = `${fmtNum(v0)}…`;
+        }
+      }
+      novaLinha.push({ fn, lit });
+    }
+
+    if (!novaLinha.length) novaLinha.push(celZero);
+    linhas.push(novaLinha);
+  }
+
+  return linhas;
+}
+
+// Varre a 1ª coluna da tabela de Routh para encontrar K onde há troca de sinal
+function encontrarKCritico(linhasRouth) {
+  const coluna0 = linhasRouth.map(linha => linha[0].fn);
+  const PASSOS  = 6000;
+  const KMAX    = 50000;
+
+  for (let i = 1; i <= PASSOS; i++) {
+    const K     = i * KMAX / PASSOS;
+    const Kprev = (i - 1) * KMAX / PASSOS;
+
+    for (const fn of coluna0) {
+      const atual    = fn(K);
+      const anterior = fn(Kprev);
+      if (isFinite(atual) && isFinite(anterior) && anterior * atual <= 0 && (anterior !== 0 || atual !== 0)) {
+        // Refina com bissecção
+        let lo = Kprev, hi = K;
+        for (let b = 0; b < 60; b++) {
+          const mid = (lo + hi) / 2;
+          if (fn(lo) * fn(mid) <= 0) hi = mid; else lo = mid;
+        }
+        return (lo + hi) / 2;
+      }
+    }
+  }
+  return null;  // não encontrou cruzamento
+}
+
+/* ============================================================
    ESTADO GLOBAL DA APLICAÇÃO
    Guarda todos os dados da função atual e do passo em exibição
 ============================================================ */
@@ -647,51 +1012,83 @@ function buildSteps(poles,zeros,N,D,nP,nZ,kmax,rawN,rawD){
   // Helper: HTML de uma equação polinomial
   const polyEq=(num,den)=>`    K · (${P.fmt(num)})\n───────────────────────\n      (${P.fmt(den)})`;
 
-  /* ── PASSO 1 ── */
-  const bodyP1=
-`Equação característica de malha fechada:
+  /* ── PASSO 1 — Polinômio característico ── */
+  // Monta polinômio D(s) + K·N(s) com coeficientes expressos como "a + bK"
+  const D_real = D.map(c => c.re);
+  const N_real = N.map(c => c.re);
+  const nDiff1 = D_real.length - N_real.length;
+  const N_pad1 = [...new Array(Math.max(0, nDiff1)).fill(0), ...N_real];
+  const grauCar = D_real.length - 1;
 
-  1 + G(s)H(s) = 0
-  1 + K · N(s)/D(s) = 0
+  const termosCar = D_real.map((d, i) => {
+    const nb  = N_pad1[i] || 0;
+    const pot = grauCar - i;
+    const coef = fmtCoeficienteK(d, nb);
+    if (coef === '0') return null;
+    const c = (coef.includes('+') || (coef.includes('−') && !coef.startsWith('−'))) ? `(${coef})` : coef;
+    if (pot === 0) return coef;
+    if (pot === 1) return `${c}s`;
+    return `${c}·s${superscript(pot)}`;
+  }).filter(Boolean);
+  const poliCarStr = termosCar.join(' + ').replace(/\+ −/g, '− ') || '0';
 
-Você informou:
-  N(s) = ${P.fmt(N)}
-  D(s) = ${P.fmt(D)}
+  const htmlP1 = `
+<p>A equação característica de malha fechada é:</p>
+<div class="eq-bloco">1 + G(s)H(s) = 0
 
-Logo:
-  D(s) + K·N(s) = 0
-  (${P.fmt(D)}) + K·(${P.fmt(N)}) = 0
-
-O parâmetro K aparece linearmente → LGR válido. ✓`;
-  steps.push({title:'Polinômio característico',body:bodyP1,plot:false});
-
-  /* ── PASSO 2 ── */
-  const listaPolos = poles.map(polo => `  × s = ${C.fmt(polo)}`).join('\n');
-  const listaZeros = zeros.length
-    ? zeros.map(zero => `  ○ s = ${C.fmt(zero)}`).join('\n')
-    : '  (nenhum zero finito)';
-  const bodyP2 =
-`Fatorando N(s) e D(s) para encontrar
-pólos e zeros de malha aberta:
-
-N(s) = ${P.fmt(N)}
-${zeros.length ? `Zeros (nZ = ${nZ}):\n${listaZeros}` : `Sem zeros (nZ = 0)`}
-
+G(s)H(s) = K · P(s),  onde  P(s) = N(s) / D(s)</div>
+<p>Com os valores inseridos:</p>
+<div class="eq-bloco">N(s) = ${P.fmt(N)}
 D(s) = ${P.fmt(D)}
-Pólos (nP = ${nP}):
-${listaPolos}
 
-Lembrando:
-  × Pólos → início do LGR (K = 0)
-  ○ Zeros → fim do LGR (K → ∞)`;
-  steps.push({title:'Fatoração — pólos e zeros de malha aberta',body:bodyP2,plot:false});
+P(s) = (${P.fmt(N)}) / (${P.fmt(D)})</div>
+<p>Substituindo e rearranjando:</p>
+<div class="eq-bloco">1 + K · N(s)/D(s) = 0
+D(s) + K·N(s) = 0</div>
+<p>Expandindo com os valores reais:</p>
+<div class="eq-bloco">${poliCarStr} = 0</div>
+<div class="res-box verde">✓ K aparece linearmente → LGR válido</div>
+`;
+  steps.push({ title: 'Polinômio característico — identificação de P(s)', html: htmlP1 });
+
+  /* ── PASSO 2 — Fatoração ── */
+  const listaPolos = poles.map((polo, i) => `p${i+1} = ${C.fmt(polo)}`).join('\n');
+  const listaZeros = zeros.length
+    ? zeros.map((zero, i) => `z${i+1} = ${C.fmt(zero)}`).join('\n')
+    : '(nenhum zero finito)';
+
+  const fatN = zeros.length > 0 ? fatoresStr(zeros) : P.fmt(N);
+  const fatD = fatoresStr(poles);
+
+  const htmlP2 = `
+<p>Fatoramos N(s) e D(s) para evidenciar pólos e zeros de malha aberta:</p>
+<div class="eq-bloco">N(s) = ${P.fmt(N)}
+     = ${fatN}</div>
+<div class="eq-bloco">D(s) = ${P.fmt(D)}
+     = ${fatD}</div>
+<p>Portanto, P(s) na forma fatorada:</p>
+<div class="eq-bloco">P(s) =    ${fatN}
+       ─────────────────────
+             ${fatD}</div>
+<div class="sub-secao">Zeros  (nZ = ${nZ})</div>
+<div class="eq-bloco">${listaZeros}</div>
+<div class="sub-secao">Pólos  (nP = ${nP})</div>
+<div class="eq-bloco">${listaPolos}</div>
+<div class="res-box azul">× Pólos → início do LGR (K = 0)
+○ Zeros → fim do LGR (K → ∞)</div>
+`;
+  steps.push({ title: 'Fatoração — pólos e zeros de malha aberta', html: htmlP2 });
 
   /* ── PASSO 3 ── */
+  const listaPol3 = poles.map(polo => `  × s = ${C.fmt(polo)}`).join('\n');
+  const listaZer3 = zeros.length
+    ? zeros.map(zero => `  ○ s = ${C.fmt(zero)}`).join('\n')
+    : '';
   const bodyP3 =
 `Marcando no plano complexo:
 
-${listaPolos}
-${zeros.length ? `\n${listaZeros}` : ''}
+${listaPol3}
+${zeros.length ? `\n${listaZer3}` : ''}
 
 Convenção:
   × = Pólos (vermelho)
@@ -791,59 +1188,128 @@ nos zeros finitos ou vai para ∞ (K→∞).`;
       }))
       .filter((ponto, i, arr) => i === 0 || Math.abs(ponto.s - arr[i - 1].s) > 1e-3);
   }
-  let textoBreakaway = `Para encontrar breakaway/break-in:\n  1. K = −D(s)/N(s)\n  2. dK/ds = 0  →  N'D − ND' = 0\n\n`;
+  let textoBreakaway_fallback = '';
+  let resultado8Html = '';
   if (!pontosBreakaway.length) {
-    textoBreakaway += `Nenhum ponto de saída/entrada real\nencontrado no LGR.`;
+    resultado8Html = `<div class="res-box amarelo">Nenhum ponto de saída/entrada real com K > 0 encontrado no LGR.</div>`;
   } else {
-    textoBreakaway += `Ponto(s) encontrado(s):\n`;
-    pontosBreakaway.forEach(ponto => { textoBreakaway += `  s = ${ponto.s.toFixed(4)}   (K = ${ponto.K.toFixed(4)})\n`; });
-    textoBreakaway += `\nVerifique se o ponto está dentro de um\nsegmento LGR (passo 4).`;
+    const lista = pontosBreakaway.map(pt =>
+      `s = ${fmtNum(pt.s)}   →   K = ${fmtNum(pt.K)}`
+    ).join('\n');
+    resultado8Html = `<div class="res-box verde">${lista}</div>`;
   }
-  steps.push({ title: 'Ponto(s) de saída/entrada no eixo real (breakaway)', body: textoBreakaway, plot: false });
 
-  /* ── PASSO 9 — Cruzamento com o eixo imaginário ── */
-  // Varre omega de 0 a 150, buscando onde Im(K(jω)) troca de sinal
-  const cruzamentos = [];
-  let imagAnterior = null;
-  let omegaAnterior = null;
-  for (let i = 1; i <= 5000; i++) {
-    const omega = i * 150 / 5000;
-    const pontoJw = C.c(0, omega);
-    const valorN = P.eval(N, pontoJw);
-    const valorD = P.eval(D, pontoJw);
-    if (C.abs(valorN) < 1e-10) { imagAnterior = null; continue; }
-    const K = C.div(C.neg(valorD), valorN);
-    // Detecta cruzamento de sinal na parte imaginária de K
-    if (imagAnterior !== null && imagAnterior * K.im < 0 && K.re > 0.01) {
-      // Bissecção para encontrar omega exato
-      let omegaMin = omegaAnterior;
-      let omegaMax = omega;
-      for (let bissecao = 0; bissecao < 40; bissecao++) {
-        const omegaMeio = (omegaMin + omegaMax) / 2;
-        const Kmedio = C.div(C.neg(P.eval(D, C.c(0, omegaMeio))), P.eval(N, C.c(0, omegaMeio)));
-        if (Kmedio.im * K.im < 0) omegaMin = omegaMeio; else omegaMax = omegaMeio;
-      }
-      const omegaCruz = (omegaMin + omegaMax) / 2;
-      const Kcruz = C.div(C.neg(P.eval(D, C.c(0, omegaCruz))), P.eval(N, C.c(0, omegaCruz)));
-      if (Kcruz.re > 0.01 && (!cruzamentos.length || Math.abs(omegaCruz - cruzamentos[cruzamentos.length - 1].om) > 0.05)) {
-        cruzamentos.push({ om: omegaCruz, K: Kcruz.re });
+  const htmlP8 = `
+<p>Queremos os pontos onde dois ramos se encontram ou se separam no eixo real.</p>
+<div class="sub-secao">Passo 1 — isolar K</div>
+<div class="eq-bloco">K(s) = −D(s) / N(s)
+
+K(s) = −(${P.fmt(D)})
+        ──────────────────
+          (${P.fmt(N)})</div>
+<div class="sub-secao">Passo 2 — condição dK/ds = 0</div>
+<p>Pela regra do quociente, dK/ds = 0 equivale ao numerador ser zero:</p>
+<div class="eq-bloco">N'(s)·D(s) − N(s)·D'(s) = 0
+
+N'(s) = ${P.fmt(derivN)}
+D'(s) = ${P.fmt(derivD)}</div>
+<div class="sub-secao">Passo 3 — polinômio resultante</div>
+<div class="eq-bloco">N'D − ND' = ${P.fmt(poliBP)} = 0</div>
+<div class="sub-secao">Raízes reais com K > 0</div>
+${resultado8Html}
+`;
+  steps.push({ title: 'Pontos de saída/entrada no eixo real (breakaway)', html: htmlP8 });
+
+  /* ── PASSO 9 — Critério de Routh-Hurwitz ── */
+  // Constrói a tabela com os coeficientes reais (parte real dos complexos)
+  const linhasRouth = construirTabelaRouth(D_real, N_real);
+  const kCrit = encontrarKCritico(linhasRouth);
+
+  // Monta as linhas HTML da tabela
+  // (marca a linha cuja primeira célula muda de sinal em K=kCrit)
+  let indiceLinhaK = -1;
+  if (kCrit !== null) {
+    for (let i = 0; i < linhasRouth.length; i++) {
+      const fn = linhasRouth[i][0].fn;
+      if (isFinite(fn(0)) && fn(kCrit - 0.5) * fn(kCrit + 0.5) < 0) {
+        indiceLinhaK = i; break;
       }
     }
-    imagAnterior = K.im;
-    omegaAnterior = omega;
   }
-  let textoRouth = `Critério de Routh-Hurwitz:\nSubstituir s = jω na equação característica\ne encontrar ω e K onde o sistema fica\nna fronteira da estabilidade.\n\n`;
-  if (!cruzamentos.length) {
-    textoRouth += `O LGR não cruza o eixo imaginário.\n\n✓ Sistema estável para todo K > 0\n  no intervalo analisado.`;
+
+  let linhasHtml = '';
+  for (let i = 0; i < linhasRouth.length; i++) {
+    const potencia = grauCar - i;
+    const cls = i === indiceLinhaK ? ' class="linha-critica"' : '';
+    const cels = linhasRouth[i].slice(0, 4).map(cel => `<td>${cel.lit}</td>`).join('');
+    linhasHtml += `<tr${cls}><th>s${superscript(potencia)}</th>${cels}</tr>`;
+  }
+
+  // Primeira coluna: lista de desigualdades de estabilidade
+  const col0Str = linhasRouth.map((linha, i) => {
+    const pot = grauCar - i;
+    return `  s${superscript(pot)}: ${linha[0].lit} > 0`;
+  }).join('\n');
+
+  // Polinômio característico com coeficientes em K
+  const termos9 = D_real.map((d, i) => {
+    const nb  = N_pad1[i] || 0;
+    const pot = grauCar - i;
+    const coef = fmtCoeficienteK(d, nb);
+    if (coef === '0') return null;
+    const c = (coef.includes('+') || (coef.includes('−') && !coef.startsWith('−'))) ? `(${coef})` : coef;
+    if (pot === 0) return coef;
+    if (pot === 1) return `${c}s`;
+    return `${c}·s${superscript(pot)}`;
+  }).filter(Boolean).join(' + ').replace(/\+ −/g, '− ') || '0';
+
+  // Resultado de estabilidade
+  let estabilidadeHtml;
+  if (!kCrit) {
+    estabilidadeHtml = `<div class="res-box verde">✓ Todos os elementos da 1ª coluna são positivos para K > 0.\nO LGR não cruza o eixo imaginário.\nSistema estável para todo K > 0.</div>`;
   } else {
-    textoRouth += `Cruzamentos com o eixo imaginário:\n`;
-    cruzamentos.forEach(cruz => {
-      textoRouth += `  s = ±${cruz.om.toFixed(4)}j\n`;
-      textoRouth += `  K_crítico = ${cruz.K.toFixed(4)}\n\n`;
-    });
-    textoRouth += `Para K > ${cruzamentos[cruzamentos.length - 1].K.toFixed(4)}, o sistema\npode se tornar instável.`;
+    // Tenta encontrar a frequência de cruzamento ω substituindo s = jω
+    let omegaCruz = null;
+    for (let i = 1; i <= 50000; i++) {
+      const om  = i * 500 / 50000;
+      const Ks  = C.div(C.neg(P.eval(D, C.c(0, om))), P.eval(N, C.c(0, om)));
+      if (Math.abs(Ks.re - kCrit) < kCrit * 0.02 && Math.abs(Ks.im) < 0.02) {
+        omegaCruz = om; break;
+      }
+    }
+
+    // Polinômio auxiliar: vem da linha imediatamente acima da linha crítica
+    let auxStr = '';
+    if (indiceLinhaK > 0) {
+      const linhaAux = linhasRouth[indiceLinhaK - 1];
+      const potAux   = grauCar - (indiceLinhaK - 1);
+      const termosAux = linhaAux.map((cel, j) => {
+        const pot = potAux - 2 * j;
+        if (pot < 0) return null;
+        const valK = cel.fn(kCrit);
+        if (Math.abs(valK) < 1e-6) return null;
+        const c = fmtNum(valK);
+        if (pot === 0) return c;
+        if (pot === 1) return `${c}s`;
+        return `${c}·s${superscript(pot)}`;
+      }).filter(Boolean).join(' + ');
+      auxStr = `\nPolinômio auxiliar (K = ${fmtNum(kCrit, 4)}):\n  ${termosAux} = 0`;
+    }
+
+    estabilidadeHtml = `<div class="res-box amarelo">⚠ K crítico = ${fmtNum(kCrit, 4)}${omegaCruz ? `\nCruzamento em s = ±${fmtNum(omegaCruz, 4)}j  (ω = ${fmtNum(omegaCruz, 4)} rad/s)` : ''}${auxStr}\n\nPara K > ${fmtNum(kCrit, 4)} o sistema fica instável.</div>`;
   }
-  steps.push({ title: 'Cruzamento com o eixo imaginário', body: textoRouth, plot: false, unstable: cruzamentos.length > 0 });
+
+  const htmlP9 = `
+<p>O critério de Routh-Hurwitz determina para quais valores de K todas as raízes do polinômio característico ficam no semiplano esquerdo (sistema estável).</p>
+<div class="sub-secao">Polinômio característico  D(s) + K·N(s) = 0</div>
+<div class="eq-bloco">${termos9} = 0</div>
+<div class="sub-secao">Tabela de Routh</div>
+<table class="routh-table">${linhasHtml}</table>
+<div class="sub-secao">Condição de estabilidade — 1ª coluna positiva</div>
+<div class="eq-bloco">${col0Str}</div>
+${estabilidadeHtml}
+`;
+  steps.push({ title: 'Cruzamento com o eixo imaginário — Routh-Hurwitz', html: htmlP9 });
 
   /* ── PASSO 10 — Ângulos de partida e chegada ── */
   // Só calcula para pólos/zeros com parte imaginária > 0 (o conjugado é simétrico)
@@ -1163,16 +1629,21 @@ function polyToString(coeficientes) {
   return termos.join('') || '0';
 }
 
-// Atualiza o preview ao vivo enquanto o usuário digita coeficientes
+// Atualiza o preview ao vivo enquanto o usuário digita coeficientes ou expressão
 function previewPoly(valorDigitado, idElemento) {
   const el = document.getElementById(idElemento);
   if (!valorDigitado.trim()) { el.style.display = 'none'; return; }
   try {
-    const coefs = parseCoeffs(valorDigitado);
+    const temS = /s/i.test(valorDigitado);
+    const coefs = parsePolyExpr(valorDigitado);
     const grau = coefs.length - 1;
-    const polinomio = polyToString(coefs);
+    const coefsReais = coefs.map(c => c.re);
+    const polinomio = polyToString(coefsReais);
+    const labelGrau = temS
+      ? `<div class="deg">expandido · grau ${grau}</div>`
+      : `<div class="deg">grau ${grau}</div>`;
     el.className = 'poly-prev ok';
-    el.innerHTML = `<div class="deg">grau ${grau}</div>${polinomio}`;
+    el.innerHTML = labelGrau + polinomio;
   } catch (erro) {
     el.className = 'poly-prev ok err';
     el.innerHTML = `<div class="deg">erro</div>${erro.message}`;
@@ -1200,16 +1671,16 @@ function startSteps() {
   const caixaErro = document.getElementById('err');
   caixaErro.style.display = 'none';
   try {
-    const coefsNumerador   = parseCoeffs(document.getElementById('in').value || '1');
-    const coefsDenominador = parseCoeffs(document.getElementById('id').value);
+    const coefsNumerador   = parsePolyExpr(document.getElementById('in').value || '1');
+    const coefsDenominador = parsePolyExpr(document.getElementById('id').value);
     const kmax = Math.max(0.1, parseFloat(document.getElementById('ik').value) || 20);
 
     if (coefsDenominador.length <= coefsNumerador.length) {
       throw new Error(`Grau do denominador (${coefsDenominador.length - 1}) deve ser maior que do numerador (${coefsNumerador.length - 1}).`);
     }
 
-    const N = P.fromCoeffs(coefsNumerador);
-    const D = P.fromCoeffs(coefsDenominador);
+    const N = coefsNumerador;
+    const D = coefsDenominador;
     const poles = findRoots(D);
     const zeros = findRoots(N);
     const numPolos = poles.length;
@@ -1264,7 +1735,11 @@ function renderPasso() {
 
   // --- Corpo: depende do tipo de passo ---
 
-  if (passoAtual.plot) {
+  if (passoAtual.html) {
+    // Passos com HTML enriquecido (equações formatadas, tabelas, etc.)
+    html += `<div class="step-body-html">${passoAtual.html}</div>`;
+
+  } else if (passoAtual.plot) {
     // Passos com gráfico: canvas + legenda de cores
     html += `<div class="canvas-wrap"><canvas id="cv"></canvas>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">
