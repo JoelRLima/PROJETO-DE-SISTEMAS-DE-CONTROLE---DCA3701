@@ -968,7 +968,7 @@ function encontrarKCritico(linhasRouth) {
     for (const fn of coluna0) {
       const atual    = fn(K);
       const anterior = fn(Kprev);
-      if (isFinite(atual) && isFinite(anterior) && anterior * atual <= 0 && (anterior !== 0 || atual !== 0)) {
+      if (isFinite(atual) && isFinite(anterior) && anterior * atual < 0) {
         // Refina com bissecção
         let lo = Kprev, hi = K;
         for (let b = 0; b < 60; b++) {
@@ -1283,6 +1283,8 @@ ${resultado8Html}
     if (indiceLinhaK > 0) {
       const linhaAux = linhasRouth[indiceLinhaK - 1];
       const potAux   = grauCar - (indiceLinhaK - 1);
+
+      // Monta string do polinômio auxiliar
       const termosAux = linhaAux.map((cel, j) => {
         const pot = potAux - 2 * j;
         if (pot < 0) return null;
@@ -1293,7 +1295,26 @@ ${resultado8Html}
         if (pot === 1) return `${c}s`;
         return `${c}·s${superscript(pot)}`;
       }).filter(Boolean).join(' + ');
-      auxStr = `\nPolinômio auxiliar (K = ${fmtNum(kCrit, 4)}):\n  ${termosAux} = 0`;
+
+      // Reconstrói o polinômio completo (com zeros nos graus ausentes)
+      // para passar ao algoritmo de busca de raízes
+      const auxPolyCompleto = [];
+      for (let deg = potAux; deg >= 0; deg--) {
+        const diff = potAux - deg;
+        if (diff % 2 === 0) {
+          const jIdx = diff / 2;
+          auxPolyCompleto.push(jIdx < linhaAux.length
+            ? C.c(linhaAux[jIdx].fn(kCrit))
+            : C.c(0));
+        } else {
+          auxPolyCompleto.push(C.c(0));   // grau ímpar ausente na linha de Routh
+        }
+      }
+
+      const raizesAux = findRoots(auxPolyCompleto);
+      const raizesAuxStr = raizesAux.map(r => `s = ${C.fmt(r, 4)}`).join('\n  ');
+
+      auxStr = `\nPolinômio auxiliar (K = ${fmtNum(kCrit, 4)}):\n  ${termosAux} = 0\nRaízes do polinômio auxiliar:\n  ${raizesAuxStr}`;
     }
 
     estabilidadeHtml = `<div class="res-box amarelo">⚠ K crítico = ${fmtNum(kCrit, 4)}${omegaCruz ? `\nCruzamento em s = ±${fmtNum(omegaCruz, 4)}j  (ω = ${fmtNum(omegaCruz, 4)} rad/s)` : ''}${auxStr}\n\nPara K > ${fmtNum(kCrit, 4)} o sistema fica instável.</div>`;
