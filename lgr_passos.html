@@ -1116,11 +1116,14 @@ nos zeros finitos ou vai para ∞ (K→∞).`;
   if (!pontosReaisPZ.length) {
     textoSegmentos += 'Nenhum pólo ou zero real → eixo real\nnão contém segmentos de LGR.';
   } else {
-    const posicoes = pontosReaisPZ.map(pt => pt.x);
-    textoSegmentos += 'Pontos singulares (da direita para esquerda):\n';
+    textoSegmentos += 'Singularidades no eixo real:\n';
     textoSegmentos += pontosReaisPZ.map(pt =>
       `  ${pt.tipo === 'P' ? '× Pólo' : '○ Zero'} em ${pt.x.toFixed(3)}`
     ).join('\n');
+    
+    // Filtra coordenadas únicas para construir as faixas de teste perfeitamente
+    const posicoes = [...new Set(pontosReaisPZ.map(pt => +pt.x.toFixed(5)))].sort((a,b) => b - a);
+    
     textoSegmentos += '\n\nSegmentos:\n';
     for (let i = 0; i < posicoes.length - 1; i++) {
       const meioPonto = (posicoes[i] + posicoes[i + 1]) / 2;
@@ -1922,23 +1925,52 @@ function calcularCriterioAngulo(prefixo) {
   let linhas = '';
   linhas += `Ponto s₀ = ${sigma}${omega >= 0 ? '+' : ''}${omega}j\n\n`;
 
+  linhas += `O ângulo de cada vetor s₀ − raiz é sempre medido no sentido anti-horário (0° a 360°):\n`;
+  linhas += `  • Quadrante 1 (\u0394Re>0, \u0394Im>0): atan(|Im|/|Re|)\n`;
+  linhas += `  • Quadrante 2 (\u0394Re<0, \u0394Im>0): 180° − atan(|Im|/|Re|)\n`;
+  linhas += `  • Quadrante 3 (\u0394Re<0, \u0394Im<0): 180° + atan(|Im|/|Re|)\n`;
+  linhas += `  • Quadrante 4 (\u0394Re>0, \u0394Im<0): 360° − atan(|Im|/|Re|)\n\n`;
+
+  function detalheAngulo(s0, obj, nome, indice) {
+    const vetor = C.sub(s0, obj);
+    let re = vetor.re, im = vetor.im;
+    // Normaliza para [0, 360) para respeitar estritamente o sentido anti-horário
+    const ang = ((C.arg(vetor) * 180 / Math.PI) % 360 + 360) % 360;
+    
+    let explicacao = '';
+    if (Math.abs(re) < 1e-4) {
+      explicacao = im > 1e-4 ? '90° (vertical p/ cima)' : (im < -1e-4 ? '270° (vertical p/ baixo)' : '0° (mesmo ponto)');
+    } else if (Math.abs(im) < 1e-4) {
+      explicacao = re > 1e-4 ? '0° (horizontal p/ direita)' : '180° (horizontal p/ esquerda)';
+    } else {
+      const absAtan = `atan(|${fmtNum(im, 2)}|/|${fmtNum(re, 2)}|)`;
+      if (re > 0 && im > 0) explicacao = `${absAtan}`;
+      else if (re < 0 && im > 0) explicacao = `180° − ${absAtan}`;
+      else if (re < 0 && im < 0) explicacao = `180° + ${absAtan}`;
+      else explicacao = `360° − ${absAtan}`;
+    }
+    
+    return `  ${nome}${indice + 1} = ${C.fmt(obj)}
+    Vetor (\u0394) = (${fmtNum(re, 3)}) + (${fmtNum(im, 3)})j
+    Cálculo = ${explicacao}
+    ∠ = ${ang.toFixed(2)}°\n\n`;
+  }
+
   if (zeros.length > 0) {
-    linhas += `Contribuição dos zeros:\n`;
+    linhas += `Contribuição dos zeros (vetor z \u2192 s₀):\n`;
     zeros.forEach((zero, i) => {
-      const ang = C.arg(C.sub(s0, zero)) * 180 / Math.PI;
-      linhas += `  z${i + 1} = ${C.fmt(zero)}: ∠ = ${ang.toFixed(2)}°\n`;
+      linhas += detalheAngulo(s0, zero, 'z', i);
     });
-    linhas += `  Soma zeros: ${somaZeros.toFixed(2)}°\n\n`;
+    linhas += `Soma zeros: ${somaZeros.toFixed(2)}°\n\n`;
   } else {
     linhas += `Sem zeros (contribuição = 0°)\n\n`;
   }
 
-  linhas += `Contribuição dos pólos:\n`;
+  linhas += `Contribuição dos pólos (vetor p \u2192 s₀):\n`;
   poles.forEach((polo, i) => {
-    const ang = C.arg(C.sub(s0, polo)) * 180 / Math.PI;
-    linhas += `  p${i + 1} = ${C.fmt(polo)}: ∠ = ${ang.toFixed(2)}°\n`;
+    linhas += detalheAngulo(s0, polo, 'p', i);
   });
-  linhas += `  Soma pólos: ${somaPolos.toFixed(2)}°\n\n`;
+  linhas += `Soma pólos: ${somaPolos.toFixed(2)}°\n\n`;
 
   linhas += `Ângulo total = ${somaZeros.toFixed(2)}° − ${somaPolos.toFixed(2)}°\n`;
   linhas += `             = ${anguloTotal.toFixed(2)}°\n`;
