@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>LGR — Passo a Passo</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <!-- ===== INPUT SECTION ===== -->
+  <div id="input-wrap">
+    <div class="hdr">
+      <h1>🎯 LGR — Passo a Passo</h1>
+      <span class="sub">12 passos</span>
+    </div>
+
+    <div class="card">
+      <div class="lbl">Função de transferência de malha aberta</div>
+
+      <div class="frac-wrap">
+        <div class="frac-label">G(s)H(s) = K ·</div>
+        <div class="frac">
+          <div class="num">N(s)</div>
+          <div class="den">D(s)</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Numerador N(s) — expressão ou coeficientes</label>
+        <input id="in" type="text" placeholder="ex: s+20  ou  1 20"
+              autocomplete="off" autocorrect="off" autocapitalize="none"
+              oninput="previewPoly(this.value,'prev-n')">
+        <div class="hint">Expressão: "s+20", "(s+1)(s+2)", "s^2+3s+2" · Ou coeficientes: "1 20"</div>
+        <div id="prev-n" class="poly-prev"></div>
+      </div>
+      <div class="field">
+        <label>Denominador D(s) — expressão ou coeficientes</label>
+        <input id="id" type="text" placeholder="ex: (s^2+4s)  ou  s(s+4)"
+              autocomplete="off" autocorrect="off" autocapitalize="none"
+              oninput="previewPoly(this.value,'prev-d')">
+        <div class="hint">Expressão: "s(s+4)", "(s^3+2s^2+s)(s+2)" · Ou coeficientes: "1 4 0"</div>
+        <div id="prev-d" class="poly-prev"></div>
+      </div>
+      <div class="field">
+        <label>K máximo para o plot</label>
+        <input id="ik" type="text" value="20"
+              autocomplete="off" autocorrect="off">
+      </div>
+
+      <div class="exs">
+        <div class="exs-lbl">Exemplos do material:</div>
+        <button class="ex" onclick="setEx('s+20','s(s+4)','15')">
+          K(s+20)/s(s+4)
+          <span>Ex. do enunciado</span>
+        </button>
+        <button class="ex" onclick="setEx('1','s(s+1)(s+2)','20')">
+          K/[s(s+1)(s+2)]
+          <span>3 pólos reais</span>
+        </button>
+        <button class="ex" onclick="setEx('s+3','s^2(s+1)(s+5)','20')">
+          K(s+3)/[s²(s+1)(s+5)]
+          <span>4 pólos + 1 zero</span>
+        </button>
+        <button class="ex" onclick="setEx('1','s(s^2+2s+5)','12')">
+          K/[s(s²+2s+5)]
+          <span>Pólos complexos</span>
+        </button>
+      </div>
+
+      <div id="err" class="err"></div>
+      <button class="btn-primary" onclick="startSteps()">▶  Iniciar passo a passo</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP SECTION ===== -->
+  <div id="step-wrap">
+    <div class="hdr">
+      <h1>🎯 LGR — Passo a Passo</h1>
+      <button class="btn-reset" onclick="reset()" style="width:auto;padding:6px 12px;font-size:12px;margin:0">
+        ← Nova função
+      </button>
+    </div>
+
+    <!-- Function reminder -->
+    <div class="card" style="padding:12px 16px;margin-bottom:12px" id="fn-reminder"></div>
+
+    <!-- Progress -->
+    <div class="prog-row">
+      <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="prog-lbl" id="prog-lbl">0 / 10</div>
+    </div>
+
+    <!-- Step display -->
+    <div class="step-card" id="step-card">
+      <!-- filled dynamically -->
+    </div>
+
+    <!-- Nav -->
+    <div class="nav">
+      <button class="btn-nav" id="btn-prev" onclick="goStep(-1)" disabled>← Anterior</button>
+      <button class="btn-nav next" id="btn-next" onclick="goStep(1)">Próximo →</button>
+    </div>
+    <button class="btn-reset" onclick="reset()">← Voltar ao início</button>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
