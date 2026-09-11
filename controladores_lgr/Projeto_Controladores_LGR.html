@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solver LGR - Controle e Automação</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <div
+    style="width:100%; max-width: 1000px; display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+    <h1>Solver LGR - Controle</h1>
+    <button id="btnLoadExample" class="btn-outline" style="width: auto;">Templates (Q1-Q6)</button>
+  </div>
+
+  <div class="container">
+    <div class="panel" id="input-panel">
+      <div class="tabs" id="moduleTabs">
+        <div class="tab active" data-mod="pd">PD</div>
+        <div class="tab" data-mod="pi">PI</div>
+        <div class="tab" data-mod="pid">PID</div>
+        <div class="tab" data-mod="1pole">1 Polo (Atraso)</div>
+        <div class="tab" data-mod="custom">Custom Gc(s)</div>
+        <div class="tab" data-mod="tuning">Ajuste Fino</div>
+        <div class="tab" data-mod="disc">Discretização</div>
+      </div>
+
+      <!-- Modulos LGR -->
+      <div id="controlForms">
+        <div class="input-group">
+          <label>G(s) Num</label>
+          <input type="text" id="gNum" value="[4, 16]" inputmode="text">
+        </div>
+        <div class="input-group">
+          <label>G(s) Den</label>
+          <input type="text" id="gDen" value="[1, 4, 4, 0]" inputmode="text">
+        </div>
+        <div class="input-group">
+          <label>H(s) Num</label>
+          <input type="text" id="hNum" value="1" inputmode="text">
+        </div>
+        <div class="input-group">
+          <label>H(s) Den</label>
+          <input type="text" id="hDen" value="1" inputmode="text">
+        </div>
+
+        <div class="input-group">
+          <label>Tipo de Especificação</label>
+          <select id="specType">
+            <option value="targets">Metas (MP% e ts)</option>
+            <option value="params">Parâmetros (ζ e ωn)</option>
+            <option value="poles">Pólos Desejados (Re e Im)</option>
+          </select>
+        </div>
+
+        <div class="row" id="rowTargets">
+          <div class="input-group">
+            <label>MP (%)</label>
+            <input type="text" id="specMP" value="10" inputmode="text">
+          </div>
+          <div class="input-group">
+            <label>Critério ts</label>
+            <select id="specTsCrit">
+              <option value="4">2% (ts = 4/ζωn)</option>
+              <option value="3">5% (ts = 3/ζωn)</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>ts (s)</label>
+            <input type="text" id="specTs" value="4" inputmode="text">
+          </div>
+        </div>
+        <div class="row hidden" id="rowParams">
+          <div class="input-group">
+            <label>ζ (Zeta)</label>
+            <input type="text" id="specZeta" value="0.5" inputmode="text">
+          </div>
+          <div class="input-group">
+            <label>ωn (rad/s)</label>
+            <input type="text" id="specWn" value="2" inputmode="text">
+          </div>
+        </div>
+        <div class="row hidden" id="rowPoles">
+          <div class="input-group">
+            <label>Pólo Real (σ)</label>
+            <input type="text" id="specRe" value="-2" inputmode="text">
+          </div>
+          <div class="input-group">
+            <label>Pólo Imag (ωd)</label>
+            <input type="text" id="specIm" value="2" inputmode="text">
+          </div>
+        </div>
+
+        <button id="btnSolve">Resolver e Gerar Memorial</button>
+        <div id="designActions" class="design-actions hidden">
+          <div class="highlight">Resultado continuo disponivel para discretizacao.</div>
+          <div class="row">
+            <button id="btnLoadControllerDisc" class="btn-outline" type="button">Discretizar controlador
+              projetado</button>
+            <button id="btnLoadTotalDisc" class="btn-outline" type="button">Discretizar sistema completo</button>
+          </div>
+          <div class="row">
+            <button id="btnApplySuggestedKc" class="btn-outline hidden" type="button">Aplicar Kc sugerido</button>
+          </div>
+          <div id="gainTuneInfo" class="disc-source hidden"></div>
+        </div>
+
+        <div id="customGcFields" class="hidden">
+          <div class="input-group">
+            <label>Gc(s) Numerador</label>
+            <input type="text" id="gcCustomNum" value="[1]" placeholder="Ex: [10, 20] ou 10(s+2)" inputmode="text">
+          </div>
+          <div class="input-group">
+            <label>Gc(s) Denominador</label>
+            <input type="text" id="gcCustomDen" value="[1]" placeholder="Ex: [1, 10] ou s+10" inputmode="text">
+          </div>
+          <div class="alert" style="margin-top: 10px;">
+            <strong>Modo Customizado:</strong> Insira os coeficientes do controlador diretamente. O ganho deve estar incluso no numerador. O app validará o sistema completo.
+          </div>
+        </div>
+      </div>
+
+      <!-- Aba de Ajuste Fino -->
+      <div id="tuningForm" class="hidden">
+        <div class="alert" id="tuningAlert" style="margin-bottom: 15px;">Projete um controlador primeiro para habilitar
+          o ajuste fino com os valores calculados.</div>
+        <div class="tuning-controls">
+          <div class="tuning-group">
+            <label>Ganho Kc <input type="number" id="tuneKcNum" step="0.01"></label>
+            <input type="range" id="tuneKc" min="0" max="20" step="0.01" value="1">
+          </div>
+          <div class="tuning-group" id="tuneZGroup">
+            <label>Zero z <input type="number" id="tuneZNum" step="0.01"></label>
+            <input type="range" id="tuneZ" min="0" max="20" step="0.01" value="1">
+          </div>
+          <div class="tuning-group hidden" id="tunePGroup">
+            <label>Pólo p <input type="number" id="tunePNum" step="0.01"></label>
+            <input type="range" id="tuneP" min="0" max="20" step="0.01" value="1">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+          <div id="tuningStatus" style="font-size: 0.8rem; color: var(--accent);">Aguardando...</div>
+          <button id="btnForceRedraw" class="btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">Forçar
+            Redesenho</button>
+        </div>
+
+        <div id="canvasContainer" style="position: relative; width: 100%; height: 350px;">
+          <canvas id="fineTuneCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="label">Overshoot (MP)</div>
+            <div class="value" id="metricMP">-%</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Tempo de Acomodação (ts)</div>
+            <div class="value" id="metricTs">-s</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Valor Final</div>
+            <div class="value" id="metricFinal">-</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+          <button id="btnApplyTuning" class="btn">Usar estes valores no projeto</button>
+          <button id="btnResetTuning" class="btn-outline">Resetar para o cálculo original</button>
+        </div>
+      </div>
+
+      <!-- Modulo Discretização -->
+      <div id="discForm" class="hidden">
+        <div class="input-group">
+          <label>F(s) Num</label>
+          <input type="text" id="fNum" value="[10, 2]" inputmode="text">
+        </div>
+        <div class="input-group">
+          <label>F(s) Den</label>
+          <input type="text" id="fDen" value="[1, 2, 0]" inputmode="text">
+        </div>
+        <div id="discSourceInfo" class="disc-source hidden"></div>
+        <div class="row">
+          <div class="input-group">
+            <label>Método</label>
+            <select id="discMethod">
+              <option value="tustin">Tustin (Bilinear)</option>
+              <option value="euler">Euler (Forward)</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Período T (s)</label>
+            <input type="text" id="discT" value="1" inputmode="text">
+          </div>
+        </div>
+        <button id="btnDisc">Discretizar Sistema</button>
+      </div>
+
+    </div>
+
+    <div class="panel hidden" id="wizard-panel">
+      <div id="wizard-header"
+        style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 16px;">
+        <h2 id="wizard-title" style="margin:0; color:var(--accent);">Título</h2>
+        <span id="wizard-counter" style="color:var(--text-muted); font-weight:bold;">1/5</span>
+      </div>
+      <div id="wizard-content" class="calc-memorial" style="min-height:300px; font-size:1.05rem;"></div>
+      <div class="row" style="margin-top: 20px;">
+        <button id="btnEdit" class="btn-outline">Editar Dados</button>
+        <button id="btnPrev" class="btn-outline" style="display:none;">Anterior</button>
+        <button id="btnNext">Avançar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
