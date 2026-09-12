@@ -1,0 +1,1646 @@
+/* ============================================================
+ A RITMÉ*TICA DE NÚMEROS COMPLEXOS
+ Cada número complexo é um objeto { re, im }
+ ============================================================ */
+const Complex = {
+    // Cria um número complexo a partir de parte real e imaginária
+    criar: (real, imag = 0) => ({ re: real, im: imag }),
+
+    // Operações básicas
+    somar:  (a, b) => ({ re: a.re + b.re, im: a.im + b.im }),
+    subtr:  (a, b) => ({ re: a.re - b.re, im: a.im - b.im }),
+    mult:   (a, b) => ({ re: a.re * b.re - a.im * b.im,
+        im: a.re * b.im + a.im * b.re }),
+        div: (a, b) => {
+            const norm = b.re * b.re + b.im * b.im;
+            if (norm < 1e-300) return Complex.criar(0);
+            return {
+                re: (a.re * b.re + a.im * b.im) / norm,
+                im: (a.im * b.re - a.re * b.im) / norm
+            };
+        },
+
+        // Módulo (distância à origem)
+        modulo:  (z) => Math.hypot(z.re, z.im),
+
+        // Argumento (ângulo em radianos)
+        angulo:  (z) => Math.atan2(z.im, z.re),
+
+        // Negativo
+        neg: (z) => ({ re: -z.re, im: -z.im }),
+
+        // Raiz quadrada complexa
+        sqrt: (z) => {
+            const r = Math.sqrt(Math.hypot(z.re, z.im));
+            const t = Math.atan2(z.im, z.re) / 2;
+            return { re: r * Math.cos(t), im: r * Math.sin(t) };
+        },
+
+        // Verifica se dois complexos são iguais dentro de uma tolerância
+        iguais: (a, b, tolerancia = 1e-5) =>
+        Math.hypot(a.re - b.re, a.im - b.im) < tolerancia,
+
+        // Formata para exibição: "3.14", "2.5j", "1+2j", etc.
+        formatar: (z, casas = 4) => {
+            const real = +z.re.toFixed(casas);
+            const imag = +z.im.toFixed(casas);
+            if (Math.abs(imag) < 1e-5) return `${real}`;
+            if (Math.abs(real) < 1e-5) return `${imag}j`;
+            return `${real}${imag >= 0 ? '+' : ''}${imag}j`;
+        }
+};
+
+// Atalho interno para não precisar redigitar 'Complex' em todo lugar
+const C = {
+    c:   Complex.criar,
+    add: Complex.somar,
+    sub: Complex.subtr,
+    mul: Complex.mult,
+    div: Complex.div,
+    abs: Complex.modulo,
+    arg: Complex.angulo,
+    neg: Complex.neg,
+    sqrt: Complex.sqrt,
+    eq:  Complex.iguais,
+    fmt: Complex.formatar
+};
+
+/* ============================================================
+ O PERAÇ*ÕES COM POLINÔMIOS
+ Representados como array de coeficientes complexos,
+do maior grau para o menor (ex: s²+3s+2 → [1, 3, 2])
+    ============================================================ */
+const Poly = {
+    // Converte array de números reais em array de complexos
+    deCoeficientes: (arr) => arr.map(c => typeof c === 'number' ? C.c(c) : c),
+
+    // Constrói polinômio a partir de suas raízes: ∏(s - raiz_i)
+    deRaizes: (raizes) => {
+        if (!raizes.length) return [C.c(1)];
+        return raizes.reduce(
+            (acum, raiz) => Poly.multiplicar(acum, [C.c(1), C.neg(raiz)]),
+                             [C.c(1)]
+        );
+    },
+
+    // Multiplica dois polinômios (convolução de coeficientes)
+    multiplicar: (a, b) => {
+        if (!a.length || !b.length) return [C.c(0)];
+        const resultado = Array(a.length + b.length - 1).fill(0).map(() => C.c(0));
+        for (let i = 0; i < a.length; i++) {
+            for (let j = 0; j < b.length; j++) {
+                resultado[i + j] = C.add(resultado[i + j], C.mul(a[i], b[j]));
+            }
+        }
+        return resultado;
+    },
+
+    // Soma dois polinômios (alinha pelo grau mais alto)
+    somar: (a, b) => {
+        const grauMax = Math.max(a.length, b.length);
+        const pa = [...Array(grauMax - a.length).fill(C.c(0)), ...a];
+        const pb = [...Array(grauMax - b.length).fill(C.c(0)), ...b];
+        return pa.map((coef, i) => C.add(coef, pb[i]));
+    },
+
+    // Multiplica todos os coeficientes por uma constante k
+    escalar: (polinomio, k) => {
+        const kComplexo = typeof k === 'number' ? C.c(k) : k;
+        return polinomio.map(coef => C.mul(coef, kComplexo));
+    },
+
+    // Derivada do polinômio (regra da potência)
+    derivar: (polinomio) => {
+        const grau = polinomio.length - 1;
+        return polinomio.slice(0, -1).map((coef, i) => C.mul(coef, C.c(grau - i)));
+    },
+
+    // Avalia o polinômio num ponto s (algoritmo de Horner)
+    avaliar: (polinomio, s) => {
+        let acumulado = C.c(0);
+        for (const coef of polinomio) {
+            acumulado = C.add(C.mul(acumulado, s), coef);
+        }
+        return acumulado;
+    },
+
+    grau: (polinomio) => polinomio.length - 1,
+
+    // Formata o polinômio como string legível: "s^2 + 3·s + 2"
+    formatar: (polinomio) => {
+        const grau = polinomio.length - 1;
+        if (grau < 0) return '0';
+        const termos = [];
+        for (let i = 0; i <= grau; i++) {
+            const coef = polinomio[i];
+            const potencia = grau - i;
+            const re = +coef.re.toFixed(5);
+            const im = +coef.im.toFixed(5);
+            if (Math.abs(re) < 1e-8 && Math.abs(im) < 1e-8) continue;
+            let valorStr = Math.abs(im) < 1e-5
+            ? `${re}`
+            : Math.abs(re) < 1e-5
+            ? `${im}j`
+            : `(${re}${im >= 0 ? '+' : ''}${im}j)`;
+            let termo;
+            if (potencia === 0) termo = valorStr;
+            else if (potencia === 1) termo = valorStr === '1' ? 's' : valorStr === '-1' ? '-s' : `${valorStr}s`;
+            else termo = valorStr === '1' ? `s^${potencia}` : valorStr === '-1' ? `-s^${potencia}` : `${valorStr}·s^${potencia}`;
+            termos.push(termo);
+        }
+        return termos.join(' + ').replace(/\+ -/g, '− ') || '0';
+    }
+};
+
+// Atalhos internos para o objeto Poly
+const P = {
+    fromCoeffs: Poly.deCoeficientes,
+    fromRoots:  Poly.deRaizes,
+    mul:    Poly.multiplicar,
+    add:    Poly.somar,
+    scale:  Poly.escalar,
+    deriv:  Poly.derivar,
+    eval:   Poly.avaliar,
+    degree: Poly.grau,
+    fmt:    Poly.formatar
+};
+
+/* ============================================================
+ B USCA *DE RAÍZES DE POLINÔMIO — algoritmo Durand-Kerner
+ Itera até todas as raízes convergirem (ou 500 iterações)
+ ============================================================ */
+function encontrarRaizes(polinomio, tolerancia = 1e-11) {
+    // Remove coeficientes iniciais nulos (grau desnecessário)
+    while (polinomio.length > 1 && C.abs(polinomio[0]) < 1e-14) {
+        polinomio = polinomio.slice(1);
+    }
+
+    const grau = polinomio.length - 1;
+    if (grau <= 0) return [];
+
+    // Normaliza pelo coeficiente líder
+    const coefLider = polinomio[0];
+    const normalizado = polinomio.map(coef => C.div(coef, coefLider));
+
+    // Casos simples: grau 1 e grau 2 têm fórmulas fechadas
+    if (grau === 1) return [C.neg(normalizado[1])];
+    if (grau === 2) {
+        const [, b, c] = normalizado;
+        const discriminante = C.sub(C.mul(b, b), C.mul(C.c(4), c));
+        const raizDisc = C.sqrt(discriminante);
+        return [
+            C.div(C.add(C.neg(b), raizDisc), C.c(2)),
+            C.div(C.sub(C.neg(b), raizDisc), C.c(2))
+        ];
+    }
+
+    // Inicializa candidatos espalhados em círculo no plano complexo
+    let estimativas = Array(grau).fill(0).map((_, k) =>
+    C.c(
+        0.4 * Math.cos(2 * Math.PI * k / grau + 0.5),
+        0.4 * Math.sin(2 * Math.PI * k / grau + 0.5)
+    )
+    );
+
+    // Itera Durand-Kerner: cada raiz converge para seu valor real
+    for (let iteracao = 0; iteracao < 500; iteracao++) {
+        let erroMaximo = 0;
+        const novasEstimativas = estimativas.map((raiz, i) => {
+            const valorNoRaiz = P.eval(normalizado, raiz);
+            // Produto (raiz - todas_as_outras_estimativas)
+            let produtoDiferenca = C.c(1);
+            for (let j = 0; j < grau; j++) {
+                if (j !== i) produtoDiferenca = C.mul(produtoDiferenca, C.sub(raiz, estimativas[j]));
+            }
+            if (C.abs(produtoDiferenca) < 1e-300) return raiz; // evita divisão por zero
+            const correcao = C.div(valorNoRaiz, produtoDiferenca);
+            erroMaximo = Math.max(erroMaximo, C.abs(correcao));
+            return C.sub(raiz, correcao);
+        });
+        estimativas = novasEstimativas;
+        if (erroMaximo < tolerancia) break;
+    }
+
+    return estimativas;
+}
+
+// Atalho interno mantido para compatibilidade com o resto do código
+const findRoots = encontrarRaizes;
+
+/* ============================================================
+ L EITUR*A DE COEFICIENTES DIGITADOS PELO USUÁRIO
+ Aceita espaço, vírgula ou ponto-e-vírgula como separadores
+ ============================================================ */
+function parseCoeffs(texto) {
+    const partes = texto.replace(/−/g, '-').trim().split(/[\s,;]+/).filter(Boolean);
+    if (!partes.length) throw new Error('Campo vazio');
+    return partes.map((parte, indice) => {
+        const valor = parseFloat(parte);
+        if (isNaN(valor)) throw new Error(`"${parte}" não é um número (coeficiente ${indice + 1})`);
+        return valor;
+    });
+}
+
+/* ============================================================
+ P ARSER* DE EXPRESSÕES POLINOMIAIS
+ Aceita formas fatoradas: "(s^2 + s)(s+2)", "s(s+1)(s+2)"
+ Também aceita polinômios expandidos: "s^3 + 2s^2 + s"
+ E a forma antiga de coeficientes: "1 2 1 0"
+ ============================================================ */
+
+// Divide uma expressão em fatores (grupos entre parênteses ou termos soltos)
+// Ex: "(s^2+s)(s+2)" → ["s^2+s", "s+2"]
+// Ex: "s(s+1)"       → ["s", "s+1"]
+function _splitFactors(str) {
+    const factors = [];
+    let i = 0;
+    let current = '';
+
+    while (i < str.length) {
+        if (str[i] === '(') {
+            // Empurra o que acumulou fora dos parênteses como fator separado
+            if (current.trim()) { factors.push(current.trim()); current = ''; }
+            // Encontra o parêntese de fechamento correspondente
+            let depth = 1, j = i + 1;
+            while (j < str.length && depth > 0) {
+                if (str[j] === '(') depth++;
+                if (str[j] === ')') depth--;
+                j++;
+            }
+            factors.push(str.slice(i + 1, j - 1));
+            i = j;
+        } else if (str[i] === '*') {
+            // '*' explícito como separador de fatores
+            if (current.trim()) { factors.push(current.trim()); current = ''; }
+            i++;
+        } else {
+            current += str[i];
+            i++;
+        }
+    }
+    if (current.trim()) factors.push(current.trim());
+    return factors.filter(f => f.trim() !== '');
+}
+
+// Analisa um único polinômio expandido como "s^3 + 2s^2 + s + 1"
+// Devolve array de coeficientes complexos do maior para o menor grau
+function _parseSinglePoly(expr) {
+    expr = expr.replace(/\s+/g, '');
+    if (!expr) return [C.c(1)];
+
+    // Sem 's' → constante numérica
+    if (!expr.toLowerCase().includes('s')) {
+        const v = parseFloat(expr);
+        if (isNaN(v)) throw new Error(`Não entendi "${expr}" como polinômio`);
+        return [C.c(v)];
+    }
+
+    // Adiciona '+' no início se o primeiro caractere não for sinal
+    if (expr[0] !== '-' && expr[0] !== '+') expr = '+' + expr;
+
+    // Captura termos com sinal: ex "+2s^3", "-s", "+4"
+    const termRe = /[+-][^+-]+/g;
+    const termStrs = expr.match(termRe) || [];
+
+    const coeffMap = {};
+
+    for (const term of termStrs) {
+        const sign = term[0] === '-' ? -1 : 1;
+        let t = term.slice(1).toLowerCase(); // remove o sinal
+        if (!t) continue;
+
+        if (t.includes('s')) {
+            const sIdx = t.indexOf('s');
+            let coefStr = t.slice(0, sIdx).replace(/\*$/, ''); // remove * final
+            const afterS  = t.slice(sIdx + 1);
+
+            let coef = (coefStr === '' || coefStr === undefined) ? 1 : parseFloat(coefStr);
+            if (isNaN(coef)) coef = 1;
+
+            let deg;
+            if      (afterS === '')           deg = 1;
+            else if (afterS[0] === '^')       deg = parseInt(afterS.slice(1), 10);
+            else                              deg = 1;
+
+            if (isNaN(deg)) throw new Error(`Expoente inválido em "${term}"`);
+            coeffMap[deg] = (coeffMap[deg] || 0) + sign * coef;
+        } else {
+            const val = parseFloat(t);
+            if (!isNaN(val)) coeffMap[0] = (coeffMap[0] || 0) + sign * val;
+        }
+    }
+
+    const maxDeg = Object.keys(coeffMap).length
+    ? Math.max(...Object.keys(coeffMap).map(Number))
+    : 0;
+
+    const arr = [];
+    for (let d = maxDeg; d >= 0; d--) {
+        arr.push(C.c(coeffMap[d] || 0));
+    }
+    return arr.length ? arr : [C.c(0)];
+}
+
+// Ponto de entrada principal do parser
+// Retorna array de coeficientes complexos do maior para o menor grau
+function parsePolyExpr(texto) {
+    const str = texto.replace(/−/g, '-').trim();
+
+    // Se não contém 's', usa o modo legado de coeficientes numéricos
+    if (!/s/i.test(str)) {
+        return parseCoeffs(str).map(c => C.c(c));
+    }
+
+    // Modo expressão: divide em fatores e multiplica
+    const normalizado = str.replace(/\s+/g, '').toLowerCase();
+    const fatores = _splitFactors(normalizado);
+
+    if (!fatores.length) throw new Error('Expressão vazia');
+
+    let result = [C.c(1)];
+    for (const f of fatores) {
+        result = P.mul(result, _parseSinglePoly(f));
+    }
+    return result;
+}
+
+/* ============================================================
+ U TILIT*ÁRIOS DO LUGAR GEOMÉTRICO DAS RAÍZES (LGR)
+ ============================================================ */
+
+// Decide se o ponto x no eixo real pertence ao LGR.
+// Regra: conta quantos pólos e zeros REAIS estão à DIREITA de x;
+// se o total for ímpar, o ponto pertence ao LGR.
+function pertenceAoEixoReal(x, polos, zeros) {
+    let contagem = 0;
+    for (const polo of polos) {
+        if (Math.abs(polo.im) < 1e-5 && polo.re > x + 1e-8) contagem++;
+    }
+    for (const zero of zeros) {
+        if (Math.abs(zero.im) < 1e-5 && zero.re > x + 1e-8) contagem++;
+    }
+    return contagem % 2 === 1;
+}
+// Atalho mantido para compatibilidade
+const onRealAxis = pertenceAoEixoReal;
+
+// Calcula um passo de grade "bonito" para o eixo do gráfico
+// (ex: 0.5, 1, 2, 5, 10, 20...)
+function calcularPassoDeGrade(valor) {
+    const expoente = Math.floor(Math.log10(valor || 1));
+    const base = 10 ** expoente;
+    return valor / base < 2 ? base * 0.5
+    : valor / base < 5 ? base
+    : base * 2;
+}
+const niceStep = calcularPassoDeGrade;
+
+/* ============================================================
+ F ORMAT*AÇÃO E ÁLGEBRA AUXILIAR PARA EXIBIÇÃO DOS PASSOS
+ ============================================================ */
+
+// Formata número removendo zeros desnecessários ao final
+function fmtNum(x, casas = 4) {
+    return String(+x.toFixed(casas));
+}
+
+// Formata expressão linear em K: "a + bK", "−K", "3", "2K", etc.
+function fmtCoeficienteK(a, b) {
+    const aZero = Math.abs(a) < 1e-8;
+    const bZero = Math.abs(b) < 1e-8;
+
+    if (aZero && bZero) return '0';
+    if (bZero)          return fmtNum(a);
+
+    // Parte do K: "K", "−K", "2K", "−2K"
+    const partK = Math.abs(b - 1)  < 1e-9 ? 'K'
+    : Math.abs(b + 1)  < 1e-9 ? '−K'
+    : b > 0            ? `${fmtNum(b)}K`
+    :                    `${fmtNum(b)}K`;   // negativo já tem sinal no fmtNum
+
+    if (aZero) return partK;
+    return b > 0 ? `${fmtNum(a)} + ${partK}` : `${fmtNum(a)} ${partK}`;
+}
+
+// Converte raízes para string de fatores: "(s + 2)(s − 1)(s²+2s+5)"
+function fatoresStr(raizes) {
+    if (!raizes.length) return '1';
+
+    // Agrupa conjugados para escrever fatores quadráticos quando possível
+    const usados = new Set();
+    const fatores = [];
+
+    for (let i = 0; i < raizes.length; i++) {
+        if (usados.has(i)) continue;
+        const r = raizes[i];
+
+        if (Math.abs(r.im) < 1e-4) {
+            // Raiz real
+            const re = +r.re.toFixed(4);
+            if (Math.abs(re) < 1e-8) fatores.push('s');
+            else if (re < 0)          fatores.push(`(s + ${fmtNum(-re)})`);
+            else                      fatores.push(`(s − ${fmtNum(re)})`);
+        } else {
+            // Procura conjugado
+            const conj = raizes.findIndex((q, j) => !usados.has(j) && j !== i &&
+            Math.abs(q.re - r.re) < 1e-4 && Math.abs(q.im + r.im) < 1e-4);
+
+            if (conj >= 0) {
+                usados.add(conj);
+                // Escreve (s² − 2σs + σ²+ω²)
+                const sigma  = +r.re.toFixed(4);
+                const omega  = +Math.abs(r.im).toFixed(4);
+                const b      = +(-2 * sigma).toFixed(4);
+                const c      = +(sigma * sigma + omega * omega).toFixed(4);
+                const bStr   = b === 0 ? '' : b > 0 ? ` + ${b}s` : ` − ${fmtNum(-b)}s`;
+                fatores.push(`(s²${bStr} + ${c})`);
+            } else {
+                // Complexo sem par (incomum)
+                const re   = +r.re.toFixed(4);
+                const sign = r.im >= 0 ? '+' : '−';
+                fatores.push(`(s − ${re} ${sign} ${fmtNum(Math.abs(r.im))}j)`);
+            }
+        }
+        usados.add(i);
+    }
+    return fatores.join('');
+}
+
+// Constrói tabela de Routh para D(s) + K·N(s) = 0.
+// Retorna array de linhas; cada linha é array de { fn: K=>número, lit: string }.
+function construirTabelaRouth(D_real, N_real) {
+    const n     = D_real.length - 1;
+    const nDiff = D_real.length - N_real.length;
+    const N_pad = [...new Array(Math.max(0, nDiff)).fill(0), ...N_real];
+
+    const celZero = { fn: () => 0, lit: '0' };
+
+    // Coeficientes do polinômio característico: c[i](K) = D[i] + K·N_pad[i]
+    const cefsChar = D_real.map((d, i) => {
+        const nb = N_pad[i] || 0;
+        return {
+            fn:  K => d + K * nb,
+            lit: fmtCoeficienteK(d, nb)
+        };
+    });
+
+    // Linha 0: posições pares → s^n, s^{n-2}, ...
+    // Linha 1: posições ímpares → s^{n-1}, s^{n-3}, ...
+    const linhas = [
+        cefsChar.filter((_, i) => i % 2 === 0),
+        cefsChar.filter((_, i) => i % 2 === 1),
+    ];
+
+    // Equaliza comprimentos das duas primeiras linhas com zeros à direita
+    while (linhas[0].length > linhas[1].length) linhas[1].push(celZero);
+    while (linhas[1].length > linhas[0].length) linhas[0].push(celZero);
+
+    // Linhas 2 em diante: fórmula padrão de Routh
+    for (let row = 2; row <= n; row++) {
+        const A = linhas[row - 2];   // linha duas acima
+        const B = linhas[row - 1];   // linha imediatamente acima
+        const novaLinha = [];
+
+        for (let col = 0; col < A.length - 1; col++) {
+            const fn = K => {
+                const b0 = B[0].fn(K);
+                if (Math.abs(b0) < 1e-12) return NaN;
+                const aCol = (A[col + 1] || celZero).fn(K);
+                const bCol = (B[col + 1] || celZero).fn(K);
+                return (b0 * aCol - A[0].fn(K) * bCol) / b0;
+            };
+
+            // Testa se a célula é linear em K: amostra em 0, 1, 2
+            const v0 = fn(0), v1 = fn(1), v2 = fn(2);
+            let lit = '?';
+            if (isFinite(v0) && isFinite(v1) && isFinite(v2)) {
+                const curvatura = Math.abs((v2 - v1) - (v1 - v0));
+                if (curvatura < 1e-4) {
+                    // Linear em K → pode expressar como "a + bK"
+                    lit = fmtCoeficienteK(v0, v1 - v0);
+                } else {
+                    // Não-linear (raro em sistemas de ordem baixa): mostra valor em K=0
+                    lit = `${fmtNum(v0)}…`;
+                }
+            }
+            novaLinha.push({ fn, lit });
+        }
+
+        if (!novaLinha.length) novaLinha.push(celZero);
+        linhas.push(novaLinha);
+    }
+
+    return linhas;
+}
+
+// Varre a 1ª coluna da tabela de Routh para encontrar K onde há troca de sinal
+function encontrarKCritico(linhasRouth) {
+    const coluna0 = linhasRouth.map(linha => linha[0].fn);
+    const PASSOS  = 6000;
+    const KMAX    = 50000;
+    const encontrados = [];
+
+    for (let i = 1; i <= PASSOS; i++) {
+        const K     = i * KMAX / PASSOS;
+        const Kprev = (i - 1) * KMAX / PASSOS;
+
+        for (let r = 0; r < coluna0.length; r++) {
+            const fn = coluna0[r];
+            const atual    = fn(K);
+            const anterior = fn(Kprev);
+            if (isFinite(atual) && isFinite(anterior) && anterior * atual <= 0 && (anterior !== 0 || atual !== 0)) {
+                // Refina com bissecção
+                let lo = Kprev, hi = K;
+                for (let b = 0; b < 60; b++) {
+                    const mid = (lo + hi) / 2;
+                    if (fn(lo) * fn(mid) <= 0) hi = mid; else lo = mid;
+                }
+                const kFound = (lo + hi) / 2;
+                // Evita duplicatas pela mesma raiz ou raízes muito próximas
+                if (!encontrados.some(e => Math.abs(e.k - kFound) < 0.1)) {
+                    encontrados.push({ k: kFound, linha: r });
+                }
+            }
+        }
+    }
+    encontrados.sort((a,b) => a.k - b.k);
+    return encontrados.length > 0 ? encontrados : null;
+}
+
+/* ============================================================
+ E STADO* GLOBAL DA APLICAÇÃO
+ Guarda todos os dados da função atual e do passo em exibição
+ ============================================================ */
+let ESTADO = {
+    polos:      [],   // raízes de D(s) — onde o LGR começa
+    zeros:      [],   // raízes de N(s) — onde o LGR termina
+    N:          [],   // coeficientes do numerador
+    D:          [],   // coeficientes do denominador
+    numPolos:   0,
+    numZeros:   0,
+    kmax:       20,   // K máximo para o plot
+    passos:     [],   // array com os 10 passos gerados
+    passoAtual: 0,    // índice do passo em exibição
+    textoN:     '',   // input original do usuário (numerador)
+    textoD:     ''    // input original do usuário (denominador)
+};
+
+// Atalho direto para o estado global (compatibilidade com o restante do código)
+let STATE = ESTADO;
+
+/* ============================================================
+ C ONSTR*UÇÃO DOS PASSOS
+ ============================================================ */
+function buildSteps(poles,zeros,N,D,nP,nZ,kmax,rawN,rawD){
+    const steps=[];
+
+    // Helper: HTML de uma equação polinomial
+    const polyEq=(num,den)=>`    K · (${P.fmt(num)})\n───────────────────────\n      (${P.fmt(den)})`;
+
+    /* ── PASSO 1 — Polinômio característico ── */
+    // Monta polinômio D(s) + K·N(s) com coeficientes expressos como "a + bK"
+    const D_real = D.map(c => c.re);
+    const N_real = N.map(c => c.re);
+    const nDiff1 = D_real.length - N_real.length;
+    const N_pad1 = [...new Array(Math.max(0, nDiff1)).fill(0), ...N_real];
+    const grauCar = D_real.length - 1;
+
+    const termosCar = D_real.map((d, i) => {
+        const nb  = N_pad1[i] || 0;
+        const pot = grauCar - i;
+        const coef = fmtCoeficienteK(d, nb);
+        if (coef === '0') return null;
+        const c = (coef.includes('+') || (coef.includes('−') && !coef.startsWith('−'))) ? `(${coef})` : coef;
+        if (pot === 0) return coef;
+        if (pot === 1) return `${c}s`;
+        return `${c}·s${superscript(pot)}`;
+    }).filter(Boolean);
+    const poliCarStr = termosCar.join(' + ').replace(/\+ −/g, '− ') || '0';
+
+    const htmlP1 = `
+    <p>A equação característica de malha fechada é:</p>
+    <div class="eq-bloco">1 + G(s)H(s) = 0
+
+    G(s)H(s) = K · P(s),  onde  P(s) = N(s) / D(s)</div>
+    <p>Com os valores inseridos:</p>
+    <div class="eq-bloco">N(s) = ${P.fmt(N)}
+    D(s) = ${P.fmt(D)}
+
+    P(s) = (${P.fmt(N)}) / (${P.fmt(D)})</div>
+    <p>Substituindo e rearranjando:</p>
+    <div class="eq-bloco">1 + K · N(s)/D(s) = 0
+    D(s) + K·N(s) = 0</div>
+    <p>Expandindo com os valores reais:</p>
+    <div class="eq-bloco">${poliCarStr} = 0</div>
+    <div class="res-box verde">✓ K aparece linearmente → LGR válido</div>
+    `;
+    steps.push({ title: 'Polinômio característico — identificação de P(s)', html: htmlP1 });
+
+    /* ── PASSO 2 — Fatoração ── */
+    const listaPolos = poles.map((polo, i) => `p${i+1} = ${C.fmt(polo)}`).join('\n');
+    const listaZeros = zeros.length
+    ? zeros.map((zero, i) => `z${i+1} = ${C.fmt(zero)}`).join('\n')
+    : '(nenhum zero finito)';
+
+    const fatN = zeros.length > 0 ? fatoresStr(zeros) : P.fmt(N);
+    const fatD = fatoresStr(poles);
+
+    const htmlP2 = `
+    <p>Fatoramos N(s) e D(s) para evidenciar pólos e zeros de malha aberta:</p>
+    <div class="eq-bloco">N(s) = ${P.fmt(N)}
+    = ${fatN}</div>
+    <div class="eq-bloco">D(s) = ${P.fmt(D)}
+    = ${fatD}</div>
+    <p>Portanto, P(s) na forma fatorada:</p>
+    <div class="eq-bloco">P(s) =    ${fatN}
+    ─────────────────────
+    ${fatD}</div>
+    <div class="sub-secao">Zeros  (nZ = ${nZ})</div>
+    <div class="eq-bloco">${listaZeros}</div>
+    <div class="sub-secao">Pólos  (nP = ${nP})</div>
+    <div class="eq-bloco">${listaPolos}</div>
+    <div class="res-box azul">× Pólos → início do LGR (K = 0)
+    ○ Zeros → fim do LGR (K → ∞)</div>
+    `;
+    steps.push({ title: 'Fatoração — pólos e zeros de malha aberta', html: htmlP2 });
+
+    /* ── PASSO 3 ── */
+    const listaPol3 = poles.map(polo => `  × s = ${C.fmt(polo)}`).join('\n');
+    const listaZer3 = zeros.length
+    ? zeros.map(zero => `  ○ s = ${C.fmt(zero)}`).join('\n')
+    : '';
+    const bodyP3 =
+    `Marcando no plano complexo:
+
+    ${listaPol3}
+    ${zeros.length ? `\n${listaZer3}` : ''}
+
+    Convenção:
+    × = Pólos (vermelho)
+    ○ = Zeros (verde)
+
+    O LGR começa nos pólos (K=0) e termina
+    nos zeros finitos ou vai para ∞ (K→∞).`;
+    steps.push({title:'Plano s — marcação de pólos (×) e zeros (○)',body:bodyP3,plot:true});
+
+    /* ── PASSO 4 ── */
+    // Lista pólos e zeros reais, ordenados da direita para a esquerda
+    const pontosReaisPZ = [
+        ...poles.filter(polo => Math.abs(polo.im) < 1e-5).map(polo => ({ x: polo.re, tipo: 'P' })),
+        ...zeros.filter(zero => Math.abs(zero.im) < 1e-5).map(zero => ({ x: zero.re, tipo: 'Z' }))
+    ].sort((a, b) => b.x - a.x);
+
+    let textoSegmentos = 'Regra: um segmento do eixo real pertence\nao LGR se há número ÍMPAR de pólos e zeros\nà sua direita.\n\n';
+    if (!pontosReaisPZ.length) {
+        textoSegmentos += 'Nenhum pólo ou zero real → eixo real\nnão contém segmentos de LGR.';
+    } else {
+        textoSegmentos += 'Singularidades no eixo real:\n';
+        textoSegmentos += pontosReaisPZ.map(pt =>
+        `  ${pt.tipo === 'P' ? '× Pólo' : '○ Zero'} em ${pt.x.toFixed(3)}`
+        ).join('\n');
+
+        // Filtra coordenadas únicas para construir as faixas de teste perfeitamente
+        const posicoes = [...new Set(pontosReaisPZ.map(pt => +pt.x.toFixed(5)))].sort((a,b) => b - a);
+
+        textoSegmentos += '\n\nSegmentos:\n';
+        for (let i = 0; i < posicoes.length - 1; i++) {
+            const meioPonto = (posicoes[i] + posicoes[i + 1]) / 2;
+            const ehLGR = onRealAxis(meioPonto, poles, zeros);
+            textoSegmentos += `  (${posicoes[i + 1].toFixed(3)}, ${posicoes[i].toFixed(3)})  →  ${ehLGR ? '✓ é LGR' : '✗ não é LGR'}\n`;
+        }
+        const pontoEsquerda = posicoes[posicoes.length - 1] - 0.5;
+        const ehLGRinf = onRealAxis(pontoEsquerda, poles, zeros);
+        textoSegmentos += `  (-∞, ${posicoes[posicoes.length - 1].toFixed(3)})  →  ${ehLGRinf ? '✓ é LGR' : '✗ não é LGR'}`;
+    }
+    steps.push({title:'Segmentos do eixo real pertencentes ao LGR',body:textoSegmentos,plot:true});
+
+    /* ── PASSO 5 ── */
+    steps.push({
+        title: 'Número de lugares separados (LS)',
+               body: `LS = nP = ${nP}\n\nCada lugar começa em um pólo (K=0) e:\n  • Termina em um zero finito, se nZ > 0\n  • Vai para o infinito ao longo de\n    assíntotas, se nP > nZ\n\nResumo:\n  nP = ${nP}   nZ = ${nZ}   LS = ${nP}`,
+               plot: false
+    });
+
+    /* ── PASSO 6 ── */
+    const temPolosComplexos = poles.some(polo => Math.abs(polo.im) > 1e-4);
+    steps.push({
+        title: 'Simetria em relação ao eixo real',
+        body: `O LGR é sempre simétrico em relação\nao eixo real (eixo horizontal).\n\nIsso ocorre porque os coeficientes do\npolinômio característico são reais, então\npólos/zeros complexos aparecem sempre em\npares conjugados.\n\n${temPolosComplexos
+            ? `Você tem pólos conjugados:\n${poles.filter(polo => polo.im > 1e-4).map(polo => `  ${C.fmt(polo)}  ↔  ${C.fmt(C.c(polo.re, -polo.im))}`).join('\n')}\n\nO LGR desses ramos é espelho um do outro.`
+            : 'Todos os pólos/zeros são reais.\nO LGR fica todo sobre o eixo real.'
+        }`,
+        plot: false
+    });
+
+    /* ── PASSO 7 ── */
+    const numAssintotas = nP - nZ;
+    let textoAssintotas = '';
+    if (numAssintotas <= 0) {
+        textoAssintotas = `nP = nZ = ${nP}\n\nTodos os ${nP} seguimentos terminam em\nzeros finitos → sem assíntotas.`;
+    } else {
+        const somaReaisPolos = poles.reduce((soma, polo) => soma + polo.re, 0);
+        const somaReaisZeros = zeros.reduce((soma, zero) => soma + zero.re, 0);
+        const centroAssintotas = (somaReaisPolos - somaReaisZeros) / numAssintotas;
+        const angulos = Array.from({ length: numAssintotas }, (_, q) => (2 * q + 1) * 180 / numAssintotas);
+        textoAssintotas =
+        `${numAssintotas} seguimento(s) vão para o infinito\nao longo de assíntotas.\n\n` +
+        `Centro das assíntotas:\n` +
+        `  σA = (Σpólos − Σzeros) / (nP − nZ)\n` +
+        `     = (${somaReaisPolos.toFixed(4)} − ${somaReaisZeros.toFixed(4)}) / ${numAssintotas}\n` +
+        `     = ${centroAssintotas.toFixed(4)}\n\n` +
+        `Ângulos das assíntotas:\n` +
+        `  φA = (2q+1) · 180° / (nP−nZ)\n\n` +
+        angulos.map((angulo, q) => `  q=${q}: φA = ${angulo.toFixed(1)}°`).join('\n');
+    }
+    steps.push({ title: `Assíntotas (${numAssintotas} segmento(s) → ∞)`, body: textoAssintotas, plot: true });
+
+    /* ── PASSO 8 — Breakaway/Break-in ── */
+    // O ponto de saída ocorre onde dK/ds = 0, equivalente a N'D − ND' = 0
+    const derivN = P.deriv(N);
+    const derivD = P.deriv(D);
+    const poliBP = P.add(P.mul(derivN, D), P.scale(P.mul(N, derivD), -1));
+    let pontosBreakaway = [];
+    if (poliBP.length > 1) {
+        pontosBreakaway = findRoots(poliBP)
+        .filter(raiz => {
+            if (Math.abs(raiz.im) > 1e-3) return false; // precisa ser (aproximadamente) real
+            const valorN = P.eval(N, raiz);
+            const valorD = P.eval(D, raiz);
+            if (C.abs(valorN) < 1e-10) return false;    // evita divisão por zero
+            const K = C.div(C.neg(valorD), valorN);
+            return K.re > 1e-6 && Math.abs(K.im) < Math.max(Math.abs(K.re) * 0.04, 1e-5);
+        })
+        .map(raiz => ({
+            s: +raiz.re.toFixed(5),
+                      K: +C.div(C.neg(P.eval(D, raiz)), P.eval(N, raiz)).re.toFixed(5)
+        }))
+        .filter((ponto, i, arr) => i === 0 || Math.abs(ponto.s - arr[i - 1].s) > 1e-3);
+    }
+    let textoBreakaway_fallback = '';
+    let resultado8Html = '';
+    if (!pontosBreakaway.length) {
+        resultado8Html = `<div class="res-box amarelo">Nenhum ponto de saída/entrada real com K > 0 encontrado no LGR.</div>`;
+    } else {
+        const lista = pontosBreakaway.map(pt =>
+        `s = ${fmtNum(pt.s)}   →   K = ${fmtNum(pt.K)}`
+        ).join('\n');
+        resultado8Html = `<div class="res-box verde">${lista}</div>`;
+    }
+
+    const htmlP8 = `
+    <p>Queremos os pontos onde dois ramos se encontram ou se separam no eixo real.</p>
+    <div class="sub-secao">Passo 1 — isolar K</div>
+    <div class="eq-bloco">K(s) = −D(s) / N(s)
+
+    K(s) = −(${P.fmt(D)})
+    ──────────────────
+    (${P.fmt(N)})</div>
+    <div class="sub-secao">Passo 2 — condição dK/ds = 0</div>
+    <p>Pela regra do quociente, dK/ds = 0 equivale ao numerador ser zero:</p>
+    <div class="eq-bloco">N'(s)·D(s) − N(s)·D'(s) = 0
+
+    N'(s) = ${P.fmt(derivN)}
+    D'(s) = ${P.fmt(derivD)}</div>
+    <div class="sub-secao">Passo 3 — polinômio resultante</div>
+    <div class="eq-bloco">N'D − ND' = ${P.fmt(poliBP)} = 0</div>
+    <div class="sub-secao">Raízes reais com K > 0</div>
+    ${resultado8Html}
+    `;
+    steps.push({ title: 'Pontos de saída/entrada no eixo real (breakaway)', html: htmlP8 });
+
+    /* ── PASSO 9 — Critério de Routh-Hurwitz ── */
+    // Constrói a tabela com os coeficientes reais (parte real dos complexos)
+    const linhasRouth = construirTabelaRouth(D_real, N_real);
+    const kCrits = encontrarKCritico(linhasRouth);
+
+    const indicesLinhasK = kCrits ? kCrits.map(obj => obj.linha) : [];
+
+    let linhasHtml = '';
+    for (let i = 0; i < linhasRouth.length; i++) {
+        const potencia = grauCar - i;
+        const cls = indicesLinhasK.includes(i) ? ' class="linha-critica"' : '';
+        const cels = linhasRouth[i].slice(0, 4).map(cel => `<td>${cel.lit}</td>`).join('');
+        linhasHtml += `<tr${cls}><th>s${superscript(potencia)}</th>${cels}</tr>`;
+    }
+
+    // Primeira coluna: lista de desigualdades de estabilidade
+    const col0Str = linhasRouth.map((linha, i) => {
+        const pot = grauCar - i;
+        return `  s${superscript(pot)}: ${linha[0].lit} > 0`;
+    }).join('\n');
+
+    // Polinômio característico com coeficientes em K
+    const termos9 = D_real.map((d, i) => {
+        const nb  = N_pad1[i] || 0;
+        const pot = grauCar - i;
+        const coef = fmtCoeficienteK(d, nb);
+        if (coef === '0') return null;
+        const c = (coef.includes('+') || (coef.includes('−') && !coef.startsWith('−'))) ? `(${coef})` : coef;
+        if (pot === 0) return coef;
+        if (pot === 1) return `${c}s`;
+        return `${c}·s${superscript(pot)}`;
+    }).filter(Boolean).join(' + ').replace(/\+ −/g, '− ') || '0';
+
+    // Resultado de estabilidade
+    let estabilidadeHtml;
+    if (!kCrits || kCrits.length === 0) {
+        // Testa apenas em K > 0 (ex: 10) para ver se é 100% estável ou 100% instável
+        const instavelSempre = linhasRouth.some(linha => { const v = linha[0].fn(10); return isFinite(v) && v <= 0; });
+        if (instavelSempre) {
+            estabilidadeHtml = `<div class="res-box vermelho">Nenhum cruzamento para K > 0 encontrado, porém existem raízes com parte real positiva (1ª coluna possui coeficientes <= 0).\nSistema instável para K > 0.</div>`;
+        } else {
+            estabilidadeHtml = `<div class="res-box verde">✓ Todos os elementos da 1ª coluna são positivos para K > 0.\nO LGR não cruza o eixo imaginário.\nSistema estável para todo K > 0.</div>`;
+        }
+    } else {
+        const blocosCriticos = kCrits.map(({k: kCrit, linha: indiceLinhaK}) => {
+            // Tenta encontrar a frequência de cruzamento ω substituindo s = jω
+            let omegaCruz = null;
+            for (let i = 1; i <= 50000; i++) {
+                const om  = i * 500 / 50000;
+                const Ks  = C.div(C.neg(P.eval(D, C.c(0, om))), P.eval(N, C.c(0, om)));
+                if (Math.abs(Ks.re - kCrit) < Math.max(kCrit * 0.05, 0.05) && Math.abs(Ks.im) < 0.05) {
+                    omegaCruz = om; break;
+                }
+            }
+
+            // Polinômio auxiliar: vem da linha imediatamente acima da linha crítica
+            let auxStr = '';
+            if (indiceLinhaK > 0) {
+                const linhaAux = linhasRouth[indiceLinhaK - 1];
+                const potAux   = grauCar - (indiceLinhaK - 1);
+
+                // Monta string do polinômio auxiliar
+                const termosAux = linhaAux.map((cel, j) => {
+                    const pot = potAux - 2 * j;
+                    if (pot < 0) return null;
+                    const valK = cel.fn(kCrit);
+                    if (Math.abs(valK) < 1e-6) return null;
+                    const c = fmtNum(valK);
+                    if (pot === 0) return c;
+                    if (pot === 1) return `${c}s`;
+                    return `${c}·s${superscript(pot)}`;
+                }).filter(Boolean).join(' + ');
+
+                const auxPolyCompleto = [];
+                for (let deg = potAux; deg >= 0; deg--) {
+                    const diff = potAux - deg;
+                    if (diff % 2 === 0) {
+                        const jIdx = diff / 2;
+                        auxPolyCompleto.push(jIdx < linhaAux.length ? C.c(linhaAux[jIdx].fn(kCrit)) : C.c(0));
+                    } else {
+                        auxPolyCompleto.push(C.c(0));
+                    }
+                }
+                const raizesAux = findRoots(auxPolyCompleto);
+                const raizesAuxStr = raizesAux.map(r => `s = ${C.fmt(r, 4)}`).join('\n  ');
+
+                auxStr = `\nPolinômio auxiliar (K = ${fmtNum(kCrit, 4)}):\n  ${termosAux} = 0\nRaízes do polinômio auxiliar:\n  ${raizesAuxStr}`;
+            }
+            return `⚠ K crítico = ${fmtNum(kCrit, 4)}${omegaCruz !== null ? `\nCruzamento em s = ±${fmtNum(omegaCruz, 4)}j  (ω = ${fmtNum(omegaCruz, 4)} rad/s)` : ''}${auxStr}`;
+        });
+
+        const ks = kCrits.map(c => c.k);
+        const testPoints = [1e-4, ...ks, Infinity];
+        let faixas = [];
+        for (let i = 0; i < testPoints.length - 1; i++) {
+            const kTest = i === testPoints.length - 2 ? testPoints[i] + 1 : (testPoints[i] + testPoints[i+1]) / 2;
+            const allPositive = linhasRouth.every(linha => { const v = linha[0].fn(kTest); return isFinite(v) && v > 0; });
+            const k1 = i === 0 ? '0' : fmtNum(testPoints[i], 4);
+            const k2 = i === testPoints.length - 2 ? '∞' : fmtNum(testPoints[i+1], 4);
+            faixas.push(`  ${k1} < K < ${k2}  →  ${allPositive ? 'ESTÁVEL' : 'INSTÁVEL'}`);
+        }
+
+        estabilidadeHtml = `<div class="res-box amarelo">${blocosCriticos.join('\n\n')}\n\nResumo interativo (faixas de K):\n${faixas.join('\n')}</div>`;
+    }
+
+    const htmlP9 = `
+    <p>O critério de Routh-Hurwitz determina para quais valores de K todas as raízes do polinômio característico ficam no semiplano esquerdo (sistema estável).</p>
+    <div class="sub-secao">Polinômio característico  D(s) + K·N(s) = 0</div>
+    <div class="eq-bloco">${termos9} = 0</div>
+    <div class="sub-secao">Tabela de Routh</div>
+    <table class="routh-table">${linhasHtml}</table>
+    <div class="sub-secao">Condição de estabilidade — 1ª coluna positiva</div>
+    <div class="eq-bloco">${col0Str}</div>
+    ${estabilidadeHtml}
+    `;
+    steps.push({ title: 'Cruzamento com o eixo imaginário — Routh-Hurwitz', html: htmlP9 });
+
+    /* ── PASSO 10 — Ângulos de partida e chegada ── */
+    // Só calcula para pólos/zeros com parte imaginária > 0 (o conjugado é simétrico)
+    const polosComplexos = poles.filter(polo => polo.im > 1e-4);
+    const zerosComplexos = zeros.filter(zero => zero.im > 1e-4);
+    let textoAngulos = '';
+
+    if (!polosComplexos.length && !zerosComplexos.length) {
+        textoAngulos = 'Não há pólos ou zeros complexos.\n\nÂngulos de partida/chegada são calculados\nsomente para pólos/zeros com parte\nimaginária ≠ 0.\n\nNeste sistema todos são reais → passe\npara o plot final do LGR.';
+    } else {
+        // Ângulo de PARTIDA de cada pólo complexo
+        polosComplexos.forEach(polo => {
+            let somaAngPolos = 0; // soma dos ângulos dos outros pólos até este
+            let somaAngZeros = 0; // soma dos ângulos dos zeros até este
+            for (const outroPolo of poles) {
+                if (C.eq(outroPolo, polo)) continue;
+                somaAngPolos += C.arg(C.sub(polo, outroPolo)) * 180 / Math.PI;
+            }
+            for (const zero of zeros) {
+                somaAngZeros += C.arg(C.sub(polo, zero)) * 180 / Math.PI;
+            }
+            const anguloPartida = ((180 - somaAngPolos + somaAngZeros) % 360 + 360) % 360;
+            textoAngulos += `Pólo s = ${C.fmt(polo, 4)}  (Im > 0)\n`;
+            textoAngulos += `  Ângulo de partida:\n`;
+            textoAngulos += `  = 180° − Σθᵢ(pólos) + Σφⱼ(zeros)\n`;
+            textoAngulos += `  = 180° − ${somaAngPolos.toFixed(2)}° + ${somaAngZeros.toFixed(2)}°\n`;
+            textoAngulos += `  = ${anguloPartida.toFixed(2)}°\n\n`;
+        });
+
+        // Ângulo de CHEGADA de cada zero complexo
+        zerosComplexos.forEach(zero => {
+            let somaAngZerosViz = 0;
+            let somaAngPolos = 0;
+            for (const outroZero of zeros) {
+                if (C.eq(outroZero, zero)) continue;
+                somaAngZerosViz += C.arg(C.sub(zero, outroZero)) * 180 / Math.PI;
+            }
+            for (const polo of poles) {
+                somaAngPolos += C.arg(C.sub(zero, polo)) * 180 / Math.PI;
+            }
+            const anguloChegada = ((180 - somaAngZerosViz + somaAngPolos) % 360 + 360) % 360;
+            textoAngulos += `Zero s = ${C.fmt(zero, 4)}  (Im > 0)\n`;
+            textoAngulos += `  Ângulo de chegada:\n`;
+            textoAngulos += `  = 180° − Σφᵢ(zeros) + Σθⱼ(pólos)\n`;
+            textoAngulos += `  = 180° − ${somaAngZerosViz.toFixed(2)}° + ${somaAngPolos.toFixed(2)}°\n`;
+            textoAngulos += `  = ${anguloChegada.toFixed(2)}°\n`;
+            textoAngulos += `  (conjugado: ${(360 - anguloChegada).toFixed(2)}°)\n\n`;
+        });
+        textoAngulos += `Os conjugados no semiplano inferior\ntêm ângulos simétricos (sinal oposto).`;
+    }
+    steps.push({ title: 'Ângulos de partida e chegada', body: textoAngulos, plot: false });
+
+    /* ── PASSO 11 — Critério do Ângulo ── */
+    // O usuário escolhe um ponto qualquer s₀ = σ + jω no plano complexo.
+    // A ferramenta calcula o ângulo de G(s₀)H(s₀) e verifica se ele
+    // satisfaz a condição de 180° (± múltiplos de 360°).
+    //
+    // Fórmula:
+    //   ∠G(s₀)H(s₀) = Σ ang(s₀ − zₖ) − Σ ang(s₀ − pⱼ)
+    //
+    // Se o resultado for 180° ± q·360°  →  s₀ PERTENCE ao LGR.
+    const descricaoP11 =
+    `Dado um ponto candidato s₀ = σ + jω, verifica-se
+    se ele pertence ao LGR pela condição de fase:
+
+    ∠G(s₀)H(s₀) = Σ ang(s₀ − zₖ) − Σ ang(s₀ − pⱼ)
+    = 180° ± q · 360°
+
+    Se a condição for satisfeita → s₀ está no LGR.
+    Se não → s₀ está fora do LGR.`;
+    steps.push({
+        title: 'Critério do Ângulo — verificar se s₀ pertence ao LGR',
+        body: descricaoP11,
+        plot: false,
+        interativo: 'angulo'   // sinaliza para renderPasso() injetar o formulário
+    });
+
+    /* ── PASSO 12 — Critério do Módulo ── */
+    // Dado s₀ confirmado no LGR (ou qualquer ponto), calcula-se o ganho K
+    // que leva as raízes do sistema fechado até aquele ponto.
+    //
+    // Fórmula:
+    //   K = ∏ |s₀ − pⱼ|  /  ∏ |s₀ − zₖ|
+    //   (produto das distâncias dos pólos) ÷ (produto das distâncias dos zeros)
+    const descricaoP12 =
+    `Dado o ponto s₀ (confirme primeiro com o Passo 11),
+    calcula-se o ganho K que coloca raízes ali:
+
+    K = ∏|s₀ − pⱼ|  /  ∏|s₀ − zₖ|
+    = (produto das distâncias aos pólos)
+    ÷ (produto das distâncias aos zeros)
+
+    Use o mesmo ponto s₀ do Passo 11.`;
+    steps.push({
+        title: 'Critério do Módulo — ganho K no ponto s₀',
+        body: descricaoP12,
+        plot: false,
+        interativo: 'modulo'   // sinaliza para renderPasso() injetar o formulário
+    });
+
+    return steps;
+}
+
+/* ============================================================
+ P LOT D*O LGR NO CANVAS
+ ============================================================ */
+const COR_RAMOS = ['#58a6ff','#3fb950','#f0883e','#bc8cff','#ff7b72','#56d364'];
+
+function drawPlot() {
+    const { poles, zeros, N, D, nP, nZ, kmax } = STATE;
+    const canvas = document.getElementById('cv');
+    if (!canvas) return;
+
+    // Ajusta o canvas ao container, levando em conta a densidade de pixels da tela
+    const container = canvas.parentElement;
+    const largura = container.clientWidth - 32;
+    const escalaPixel = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width  = largura * escalaPixel;
+    canvas.height = largura * escalaPixel;
+    canvas.style.width  = largura + 'px';
+    canvas.style.height = largura + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(escalaPixel, escalaPixel);
+
+    // Varre 600 valores de K e calcula as raízes do polinômio característico
+    const numPassosK = 600;
+    const ramos = Array.from({ length: nP }, () => []);
+    let raizesAnterior = null;
+
+    for (let ki = 0; ki <= numPassosK; ki++) {
+        const K = ki * kmax / numPassosK;
+        const poliCaract = P.add(D, P.scale(N, K));
+        let raizesAtuais = findRoots(poliCaract);
+
+        // Reordena raízes para manter continuidade dos ramos (casa cada raiz com a mais próxima anterior)
+        if (raizesAnterior) {
+            const usadas = new Set();
+            raizesAtuais = raizesAnterior.map(raizPrev => {
+                let melhorIdx = -1;
+                let menorDist = Infinity;
+                for (let j = 0; j < raizesAtuais.length; j++) {
+                    if (usadas.has(j)) continue;
+                    const dist = C.abs(C.sub(raizPrev, raizesAtuais[j]));
+                    if (dist < menorDist) { menorDist = dist; melhorIdx = j; }
+                }
+                if (melhorIdx >= 0) usadas.add(melhorIdx);
+                return melhorIdx >= 0 ? raizesAtuais[melhorIdx] : C.c(NaN);
+            });
+        }
+        raizesAtuais.forEach((raiz, i) => { if (i < ramos.length) ramos[i].push(raiz); });
+        raizesAnterior = raizesAtuais;
+    }
+
+    // Calcula limites do plano a partir de todos os pontos visíveis
+    const todosPontos = [...poles, ...zeros, ...ramos.flat()]
+    .filter(pt => isFinite(pt.re) && isFinite(pt.im) && Math.abs(pt.im) < 1e4 && Math.abs(pt.re) < 1e4);
+    let xMin = -2, xMax = 1, yMin = -2, yMax = 2;
+    if (todosPontos.length) {
+        xMin = Math.min(...todosPontos.map(pt => pt.re));
+        xMax = Math.max(...todosPontos.map(pt => pt.re));
+        yMin = Math.min(...todosPontos.map(pt => pt.im));
+        yMax = Math.max(...todosPontos.map(pt => pt.im));
+    }
+    // Adiciona margem e garante aspecto quadrado
+    const margem = Math.max(xMax - xMin, yMax - yMin) * 0.15 + 0.5;
+    xMin -= margem; xMax += margem; yMin -= margem; yMax += margem;
+    const alcance = Math.max(xMax - xMin, yMax - yMin);
+    const centroX = (xMin + xMax) / 2;
+    const centroY = (yMin + yMax) / 2;
+    xMin = centroX - alcance / 2; xMax = centroX + alcance / 2;
+    yMin = centroY - alcance / 2; yMax = centroY + alcance / 2;
+
+    // Funções de conversão coordenada-real → pixel
+    const px = (re) => (re - xMin) / (xMax - xMin) * largura;
+    const py = (im) => largura - (im - yMin) / (yMax - yMin) * largura;
+
+    // Fundo
+    ctx.fillStyle = '#0f1117';
+    ctx.fillRect(0, 0, largura, largura);
+
+    // Grade sutil
+    const passoGrade = niceStep((xMax - xMin) / 5);
+    ctx.strokeStyle = 'rgba(140,150,160,0.1)';
+    ctx.lineWidth = 0.5;
+    for (let gx = Math.ceil(xMin / passoGrade) * passoGrade; gx <= xMax + 1e-9; gx += passoGrade) {
+        ctx.beginPath(); ctx.moveTo(px(gx), 0); ctx.lineTo(px(gx), largura); ctx.stroke();
+    }
+    for (let gy = Math.ceil(yMin / passoGrade) * passoGrade; gy <= yMax + 1e-9; gy += passoGrade) {
+        ctx.beginPath(); ctx.moveTo(0, py(gy)); ctx.lineTo(largura, py(gy)); ctx.stroke();
+    }
+
+    // Eixos
+    ctx.strokeStyle = 'rgba(139,148,158,0.45)';
+    ctx.lineWidth = 0.9;
+    if (xMin < 0 && xMax > 0) { ctx.beginPath(); ctx.moveTo(px(0), 0); ctx.lineTo(px(0), largura); ctx.stroke(); }
+    if (yMin < 0 && yMax > 0) { ctx.beginPath(); ctx.moveTo(0, py(0)); ctx.lineTo(largura, py(0)); ctx.stroke(); }
+
+    // Rótulos numéricos nos eixos
+    const tamanhoFonte = Math.max(10, Math.round(largura * 0.03));
+    ctx.fillStyle = 'rgba(139,148,158,0.7)';
+    ctx.font = `${tamanhoFonte}px 'Courier New',monospace`;
+    const passoRotulo = passoGrade * Math.ceil(3 / (largura * passoGrade / (xMax - xMin) * 0.1 + 1));
+    ctx.textAlign = 'center';
+    for (let gx = Math.ceil(xMin / passoRotulo) * passoRotulo; gx <= xMax + 1e-9; gx += passoRotulo) {
+        const valor = +gx.toFixed(3);
+        const x = px(gx);
+        const y = py(0);
+        ctx.fillText(valor, x, Math.min(largura - 3, Math.max(tamanhoFonte + 2, y + tamanhoFonte + 2)));
+    }
+    ctx.textAlign = 'right';
+    for (let gy = Math.ceil(yMin / passoRotulo) * passoRotulo; gy <= yMax + 1e-9; gy += passoRotulo) {
+        if (Math.abs(gy) < passoGrade * 0.1) continue;
+        const valor = +gy.toFixed(3);
+        const x = px(0);
+        const y = py(gy);
+        ctx.fillText(`${valor}j`, Math.max(50, x - 4), Math.min(largura - 3, Math.max(tamanhoFonte, y + tamanhoFonte * 0.35)));
+    }
+
+    // Assíntotas (tracejadas em amarelo)
+    if (nP > nZ) {
+        const somaPolos = poles.reduce((soma, p) => soma + p.re, 0);
+        const somaZeros = zeros.reduce((soma, z) => soma + z.re, 0);
+        const centroAssintotas = (somaPolos - somaZeros) / (nP - nZ);
+        const numAss = nP - nZ;
+        const comprimento = (xMax - xMin) * 0.8;
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = 'rgba(210,153,34,0.4)';
+        ctx.lineWidth = 1.2;
+        for (let q = 0; q < numAss; q++) {
+            const angulo = (2 * q + 1) * Math.PI / numAss;
+            ctx.beginPath();
+            ctx.moveTo(px(centroAssintotas), py(0));
+            ctx.lineTo(px(centroAssintotas + comprimento * Math.cos(angulo)), py(comprimento * Math.sin(angulo)));
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(210,153,34,0.7)';
+        ctx.beginPath(); ctx.arc(px(centroAssintotas), py(0), 3.5, 0, 2 * Math.PI); ctx.fill();
+    }
+
+    // Ramos do LGR (um por cor)
+    ramos.forEach((ramo, idx) => {
+        const cor = COR_RAMOS[idx % COR_RAMOS.length];
+        ctx.strokeStyle = cor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        let desenhando = false;
+        for (const pt of ramo) {
+            if (!isFinite(pt.re) || !isFinite(pt.im) || Math.abs(pt.im) > 1e4 || Math.abs(pt.re) > 1e4) {
+                desenhando = false; continue;
+            }
+            const x = px(pt.re);
+            const y = py(pt.im);
+            if (x < -largura || x > 2 * largura || y < -largura || y > 2 * largura) {
+                if (desenhando) ctx.lineTo(x, y);
+                desenhando = false; continue;
+            }
+            if (!desenhando) { ctx.moveTo(x, y); desenhando = true; }
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    });
+
+    // Zeros (círculo verde)
+    ctx.strokeStyle = '#3fb950';
+    ctx.lineWidth = 2.5;
+    zeros.forEach(zero => {
+        ctx.beginPath(); ctx.arc(px(zero.re), py(zero.im), 7, 0, 2 * Math.PI); ctx.stroke();
+        ctx.fillStyle = '#3fb950';
+        ctx.beginPath(); ctx.arc(px(zero.re), py(zero.im), 2.5, 0, 2 * Math.PI); ctx.fill();
+    });
+
+    // Pólos (cruz vermelha)
+    ctx.strokeStyle = '#f85149';
+    ctx.lineWidth = 2.8;
+    poles.forEach(polo => {
+        const x = px(polo.re);
+        const y = py(polo.im);
+        const r = 8;
+        ctx.beginPath();
+        ctx.moveTo(x - r, y - r); ctx.lineTo(x + r, y + r);
+        ctx.moveTo(x + r, y - r); ctx.lineTo(x - r, y + r);
+        ctx.stroke();
+    });
+}
+
+/* ============================================================
+ U I    *
+ ============================================================ */
+/* ============================================================
+ L IVE P*REVIEW
+ ============================================================ */
+function superscript(n){
+    const sup={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+    return String(n).split('').map(c=>sup[c]||c).join('');
+}
+
+// Converte array de coeficientes reais em string legível: "s² + 3s + 2"
+function polyToString(coeficientes) {
+    const grau = coeficientes.length - 1;
+    if (grau < 0) return '0';
+    const termos = [];
+    for (let i = 0; i <= grau; i++) {
+        const coef = coeficientes[i];
+        const potencia = grau - i;
+        if (coef === 0) continue;
+        const valorAbs = Math.abs(coef);
+        const sinal = termos.length === 0
+        ? (coef < 0 ? '−' : '')
+        : (coef < 0 ? ' − ' : ' + ');
+        let termo = '';
+        if (potencia === 0) termo = `${valorAbs}`;
+        else if (potencia === 1) termo = valorAbs === 1 ? 's' : `${valorAbs}s`;
+        else termo = valorAbs === 1 ? `s${superscript(potencia)}` : `${valorAbs}s${superscript(potencia)}`;
+        termos.push(sinal + termo);
+    }
+    return termos.join('') || '0';
+}
+
+// Atualiza o preview ao vivo enquanto o usuário digita coeficientes ou expressão
+function previewPoly(valorDigitado, idElemento) {
+    const el = document.getElementById(idElemento);
+    if (!valorDigitado.trim()) { el.style.display = 'none'; return; }
+    try {
+        const temS = /s/i.test(valorDigitado);
+        const coefs = parsePolyExpr(valorDigitado);
+        const grau = coefs.length - 1;
+        const coefsReais = coefs.map(c => c.re);
+        const polinomio = polyToString(coefsReais);
+        const labelGrau = temS
+        ? `<div class="deg">expandido · grau ${grau}</div>`
+        : `<div class="deg">grau ${grau}</div>`;
+        el.className = 'poly-prev ok';
+        el.innerHTML = labelGrau + polinomio;
+    } catch (erro) {
+        el.className = 'poly-prev ok err';
+        el.innerHTML = `<div class="deg">erro</div>${erro.message}`;
+    }
+}
+
+// Preenche os campos com um exemplo pré-definido
+function setEx(numerador, denominador, kmax) {
+    document.getElementById('in').value = numerador;
+    document.getElementById('id').value = denominador;
+    document.getElementById('ik').value = kmax;
+    previewPoly(numerador, 'prev-n');
+    previewPoly(denominador, 'prev-d');
+}
+
+// Exibe mensagem de erro visível ao usuário
+function showErr(mensagem) {
+    const caixaErro = document.getElementById('err');
+    caixaErro.textContent = '⚠ ' + mensagem;
+    caixaErro.style.display = 'block';
+}
+
+// Lê os campos do formulário, valida e inicializa os 10 passos
+function startSteps() {
+    const caixaErro = document.getElementById('err');
+    caixaErro.style.display = 'none';
+    try {
+        const coefsNumerador   = parsePolyExpr(document.getElementById('in').value || '1');
+        const coefsDenominador = parsePolyExpr(document.getElementById('id').value);
+        const kmax = Math.max(0.1, parseFloat(document.getElementById('ik').value) || 20);
+
+        if (coefsDenominador.length <= coefsNumerador.length) {
+            throw new Error(`Grau do denominador (${coefsDenominador.length - 1}) deve ser maior que do numerador (${coefsNumerador.length - 1}).`);
+        }
+
+        const N = coefsNumerador;
+        const D = coefsDenominador;
+        const poles = findRoots(D);
+        const zeros = findRoots(N);
+        const numPolos = poles.length;
+        const numZeros = zeros.length;
+        const textoN = document.getElementById('in').value;
+        const textoD = document.getElementById('id').value;
+
+        // Atualiza o estado global
+        STATE = { poles, zeros, N, D, nP: numPolos, nZ: numZeros, kmax, steps: [], cur: 0, rawN: textoN, rawD: textoD };
+        STATE.steps = buildSteps(poles, zeros, N, D, numPolos, numZeros, kmax, textoN, textoD);
+
+        // Troca de tela: esconde formulário, mostra passos
+        document.getElementById('input-wrap').style.display = 'none';
+        document.getElementById('step-wrap').style.display  = 'block';
+
+        // Exibe a função que está sendo analisada no topo
+        document.getElementById('fn-reminder').innerHTML =
+        `<div style="font-size:10px;color:var(--t4);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Função analisada</div>` +
+        `<div style="font-family:'Courier New',monospace;font-size:14px;color:var(--t1);text-align:center;line-height:1.9">` +
+        `G(s)H(s) = K · <span style="border-bottom:1.5px solid var(--t3);display:inline-block;padding:0 4px">${P.fmt(N)}</span><br>` +
+        `<span style="color:var(--t4);font-size:11px;padding:0 4px">${P.fmt(D)}</span></div>`;
+
+        renderPasso();
+    } catch (erro) { showErr(erro.message); }
+}
+
+// Renderiza o passo atual na tela
+function renderPasso() {
+    const { steps, cur } = STATE;
+    const passoAtual = steps[cur];
+    const total = steps.length;
+
+    // Atualiza barra de progresso e contador
+    document.getElementById('prog-fill').style.width = `${((cur + 1) / total) * 100}%`;
+    document.getElementById('prog-lbl').textContent = `${cur + 1} / ${total}`;
+
+    // Atualiza botões de navegação
+    document.getElementById('btn-prev').disabled = cur === 0;
+    const btnProximo = document.getElementById('btn-next');
+    if (cur === total - 1) { btnProximo.textContent = '✓ Concluído'; btnProximo.disabled = true; }
+    else { btnProximo.textContent = 'Próximo →'; btnProximo.disabled = false; }
+
+    // --- Montagem do cabeçalho do card (igual para todos os passos) ---
+    let html = `
+    <div class="step-top">
+    <div class="step-badge">
+    <span class="step-num">Passo ${cur + 1} de ${total}</span>
+    </div>
+    <div class="step-title">${passoAtual.title}</div>
+    </div>
+    `;
+
+    // --- Corpo: depende do tipo de passo ---
+
+    if (passoAtual.html) {
+        // Passos com HTML enriquecido (equações formatadas, tabelas, etc.)
+        html += `<div class="step-body-html">${passoAtual.html}</div>`;
+
+    } else if (passoAtual.plot) {
+        // Passos com gráfico: canvas + legenda de cores
+        html += `<div class="canvas-wrap"><canvas id="cv"></canvas>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);font-family:'Courier New',monospace">
+        <span style="color:#f85149;font-size:18px;font-weight:700;line-height:1">×</span> Pólos (K=0)</div>
+        ${STATE.zeros.length ? `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);font-family:'Courier New',monospace">
+            <span style="display:inline-block;width:12px;height:12px;border:2px solid #3fb950;border-radius:50%"></span> Zeros (K→∞)</div>` : ''}
+            <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);font-family:'Courier New',monospace">
+            <span style="display:inline-block;width:20px;height:2px;background:#58a6ff"></span> LGR</div>
+            ${STATE.nP > STATE.nZ ? `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);font-family:'Courier New',monospace">
+                <span style="display:inline-block;width:20px;height:0;border-top:2px dashed rgba(210,153,34,.8)"></span> Assíntotas</div>` : ''}
+                </div></div>`;
+                html += `<div class="step-body">${passoAtual.body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+
+    } else if (passoAtual.interativo) {
+        // Passos 11 e 12: descrição + formulário interativo
+        html += `<div class="passo-descricao">${passoAtual.body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+        html += construirFormularioPonto(passoAtual.interativo);
+
+    } else {
+        // Passos normais de texto
+        html += `<div class="step-body">${passoAtual.body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+    }
+
+    document.getElementById('step-card').innerHTML = html;
+
+    if (passoAtual.plot) setTimeout(drawPlot, 30);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+// Mantém compatibilidade com chamadas anteriores a render()
+const render = renderPasso;
+
+// Navega entre passos: direção +1 (próximo) ou -1 (anterior)
+function goStep(direcao) {
+    const { steps, cur } = STATE;
+    const novoPasso = cur + direcao;
+    if (novoPasso < 0 || novoPasso >= steps.length) return;
+    STATE.cur = novoPasso;
+    renderPasso();
+}
+
+// Volta ao início: limpa o estado e exibe o formulário novamente
+function reset() {
+    STATE = { poles: [], zeros: [], N: [], D: [], nP: 0, nZ: 0, kmax: 20, steps: [], cur: 0 };
+    document.getElementById('step-wrap').style.display  = 'none';
+    document.getElementById('input-wrap').style.display = 'block';
+    document.getElementById('err').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+/* ============================================================
+ F ORMUL*ÁRIO INTERATIVO — Passos 11 e 12
+ Gera o HTML do input de ponto s₀ = σ + jω e do botão
+ de calcular. O 'tipo' define qual cálculo será chamado.
+ ============================================================ */
+function construirFormularioPonto(tipo) {
+    // Prefixo único nos IDs para evitar conflito entre os passos 11 e 12
+    const prefixo = tipo === 'angulo' ? 'p11' : 'p12';
+    const funcaoCalculo = tipo === 'angulo' ? 'calcularCriterioAngulo' : 'calcularCriterioModulo';
+
+    return `
+    <div class="ponto-form">
+
+    <!-- Linha com os dois campos: parte real e parte imaginária -->
+    <div class="ponto-campos">
+    <div class="ponto-campo">
+    <label>σ (parte real)</label>
+    <input id="${prefixo}-sigma" type="text" placeholder="ex: −1"
+    autocomplete="off" autocorrect="off" autocapitalize="none">
+    </div>
+    <div class="ponto-campo">
+    <label>ω (parte imaginária)</label>
+    <input id="${prefixo}-omega" type="text" placeholder="ex: 2"
+    autocomplete="off" autocorrect="off" autocapitalize="none">
+    </div>
+    </div>
+
+    <!-- Nota explicativa sobre o ponto -->
+    <div class="ponto-nota">
+    s₀ = σ + jω &nbsp;&mdash;&nbsp; deixe ω = 0 para ponto no eixo real
+    </div>
+
+    <!-- Botão que dispara o cálculo -->
+    <button class="btn-calcular" onclick="${funcaoCalculo}('${prefixo}')">
+    Calcular
+    </button>
+
+    <!-- Caixa onde o resultado aparece após clicar em Calcular -->
+    <div id="${prefixo}-resultado" class="ponto-resultado"></div>
+
+    </div>
+    `;
+}
+
+/* ============================================================
+ P ASSO *11 — CRÍTÉRIO DO ÂNGULO
+ Verifica se o ponto s₀ = σ + jω pertence ao LGR.
+
+ Método:
+ 1. Calcular ang(s₀ − zₖ) para cada zero  (contribuição positiva)
+ 2. Calcular ang(s₀ − pⱼ) para cada pólo (contribuição negativa)
+ 3. Ângulo total = Σang(zeros) − Σang(pólos)
+ 4. Normaliza para [0°, 360°) e verifica se ≈ 180°
+ ============================================================ */
+function calcularCriterioAngulo(prefixo) {
+    const sigmaStr = document.getElementById(`${prefixo}-sigma`).value.replace(/−/g, '-');
+    const omegaStr = document.getElementById(`${prefixo}-omega`).value.replace(/−/g, '-');
+    const sigma = parseFloat(sigmaStr);
+    const omega = parseFloat(omegaStr || '0');
+    const caixaResultado = document.getElementById(`${prefixo}-resultado`);
+
+    // Valida entrada
+    if (isNaN(sigma)) {
+        caixaResultado.className = 'ponto-resultado aviso';
+        caixaResultado.style.display = 'block';
+        caixaResultado.textContent = '⚠ Informe pelo menos o valor de σ.';
+        return;
+    }
+
+    const s0 = C.c(sigma, omega);              // ponto candidato como número complexo
+    const { poles, zeros } = STATE;
+
+    // Soma dos ângulos dos vetores (zero → s₀)
+    let somaZeros = 0;
+    zeros.forEach(zero => {
+        somaZeros += C.arg(C.sub(s0, zero)) * 180 / Math.PI;
+    });
+
+    // Soma dos ângulos dos vetores (pólo → s₀)
+    let somaPolos = 0;
+    poles.forEach(polo => {
+        somaPolos += C.arg(C.sub(s0, polo)) * 180 / Math.PI;
+    });
+
+    // Ângulo total da função de transferência no ponto s₀
+    const anguloTotal = somaZeros - somaPolos;
+
+    // Normaliza para [0°, 360°) para comparar com 180°
+    const anguloNorm = ((anguloTotal % 360) + 360) % 360;
+
+    // Tolerância de ±5° para considerar “praticamenete 180°”
+    const tolerancia = 5;
+    const pertenceAoLGR = Math.abs(anguloNorm - 180) < tolerancia;
+
+    // Monta o texto de resultado linha a linha
+    let linhas = '';
+    linhas += `Ponto s₀ = ${sigma}${omega >= 0 ? '+' : ''}${omega}j\n\n`;
+
+    linhas += `O ângulo de cada vetor s₀ − raiz é sempre medido no sentido anti-horário (0° a 360°):\n`;
+    linhas += `  • Quadrante 1 (\u0394Re>0, \u0394Im>0): atan(|Im|/|Re|)\n`;
+    linhas += `  • Quadrante 2 (\u0394Re<0, \u0394Im>0): 180° − atan(|Im|/|Re|)\n`;
+    linhas += `  • Quadrante 3 (\u0394Re<0, \u0394Im<0): 180° + atan(|Im|/|Re|)\n`;
+    linhas += `  • Quadrante 4 (\u0394Re>0, \u0394Im<0): 360° − atan(|Im|/|Re|)\n\n`;
+
+    function detalheAngulo(s0, obj, nome, indice) {
+        const vetor = C.sub(s0, obj);
+        let re = vetor.re, im = vetor.im;
+        // Normaliza para [0, 360) para respeitar estritamente o sentido anti-horário
+        const ang = ((C.arg(vetor) * 180 / Math.PI) % 360 + 360) % 360;
+
+        let explicacao = '';
+        if (Math.abs(re) < 1e-4) {
+            explicacao = im > 1e-4 ? '90° (vertical p/ cima)' : (im < -1e-4 ? '270° (vertical p/ baixo)' : '0° (mesmo ponto)');
+        } else if (Math.abs(im) < 1e-4) {
+            explicacao = re > 1e-4 ? '0° (horizontal p/ direita)' : '180° (horizontal p/ esquerda)';
+        } else {
+            const absAtan = `atan(|${fmtNum(im, 2)}|/|${fmtNum(re, 2)}|)`;
+            if (re > 0 && im > 0) explicacao = `${absAtan}`;
+            else if (re < 0 && im > 0) explicacao = `180° − ${absAtan}`;
+            else if (re < 0 && im < 0) explicacao = `180° + ${absAtan}`;
+            else explicacao = `360° − ${absAtan}`;
+        }
+
+        return `  ${nome}${indice + 1} = ${C.fmt(obj)}
+        Vetor (\u0394) = (${fmtNum(re, 3)}) + (${fmtNum(im, 3)})j
+        Cálculo = ${explicacao}
+        ∠ = ${ang.toFixed(2)}°\n\n`;
+    }
+
+    if (zeros.length > 0) {
+        linhas += `Contribuição dos zeros (vetor z \u2192 s₀):\n`;
+        zeros.forEach((zero, i) => {
+            linhas += detalheAngulo(s0, zero, 'z', i);
+        });
+        linhas += `Soma zeros: ${somaZeros.toFixed(2)}°\n\n`;
+    } else {
+        linhas += `Sem zeros (contribuição = 0°)\n\n`;
+    }
+
+    linhas += `Contribuição dos pólos (vetor p \u2192 s₀):\n`;
+    poles.forEach((polo, i) => {
+        linhas += detalheAngulo(s0, polo, 'p', i);
+    });
+    linhas += `Soma pólos: ${somaPolos.toFixed(2)}°\n\n`;
+
+    linhas += `Ângulo total = ${somaZeros.toFixed(2)}° − ${somaPolos.toFixed(2)}°\n`;
+    linhas += `             = ${anguloTotal.toFixed(2)}°\n`;
+    linhas += `  (normalizado: ${anguloNorm.toFixed(2)}°)\n\n`;
+
+    if (pertenceAoLGR) {
+        linhas += `✓ ${anguloNorm.toFixed(1)}° ≈ 180° \u2192 s₀ PERTENCE ao LGR`;
+        caixaResultado.className = 'ponto-resultado ok';
+    } else {
+        linhas += `✗ ${anguloNorm.toFixed(1)}° ≠ 180° \u2192 s₀ está FORA do LGR`;
+        caixaResultado.className = 'ponto-resultado fora';
+    }
+
+    caixaResultado.style.display = 'block';
+    caixaResultado.textContent = linhas;
+}
+
+/* ============================================================
+ P ASSO *12 — CRÍTÉRIO DO MÓDULO
+ Calcula o ganho K necessário para que o sistema tenha
+ raiz em s₀ = σ + jω.
+
+ Fórmula:
+ K = ∏|s₀ − pⱼ|  /  ∏|s₀ − zₖ|
+ (produto das distâncias aos pólos) ÷ (produto das distâncias aos zeros)
+
+ Obs: se s₀ coincidir com um zero, K → ∞ (divisor = 0).
+ ============================================================ */
+function calcularCriterioModulo(prefixo) {
+    const sigmaStr = document.getElementById(`${prefixo}-sigma`).value.replace(/−/g, '-');
+    const omegaStr = document.getElementById(`${prefixo}-omega`).value.replace(/−/g, '-');
+    const sigma = parseFloat(sigmaStr);
+    const omega = parseFloat(omegaStr || '0');
+    const caixaResultado = document.getElementById(`${prefixo}-resultado`);
+
+    // Valida entrada
+    if (isNaN(sigma)) {
+        caixaResultado.className = 'ponto-resultado aviso';
+        caixaResultado.style.display = 'block';
+        caixaResultado.textContent = '⚠ Informe pelo menos o valor de σ.';
+        return;
+    }
+
+    const s0 = C.c(sigma, omega);              // ponto candidato
+    const { poles, zeros } = STATE;
+
+    // Produto das distâncias de s₀ a cada pólo: ∏|s₀ − pⱼ|
+    let prodDistPolos = 1;
+    poles.forEach(polo => {
+        prodDistPolos *= C.abs(C.sub(s0, polo));
+    });
+
+    // Produto das distâncias de s₀ a cada zero: ∏|s₀ − zₖ|
+    let prodDistZeros = 1;
+    zeros.forEach(zero => {
+        prodDistZeros *= C.abs(C.sub(s0, zero));
+    });
+
+    // Monta o texto de resultado linha a linha
+    let linhas = '';
+    linhas += `Ponto s₀ = ${sigma}${omega >= 0 ? '+' : ''}${omega}j\n\n`;
+
+    linhas += `Distâncias aos pólos |s₀ − pⱼ|:\n`;
+    poles.forEach((polo, i) => {
+        const dist = C.abs(C.sub(s0, polo));
+        linhas += `  p${i + 1} = ${C.fmt(polo)}: |dist| = ${dist.toFixed(4)}\n`;
+    });
+    linhas += `  Produto = ${prodDistPolos.toFixed(4)}\n\n`;
+
+    if (zeros.length > 0) {
+        linhas += `Distâncias aos zeros |s₀ − zₖ|:\n`;
+        zeros.forEach((zero, i) => {
+            const dist = C.abs(C.sub(s0, zero));
+            linhas += `  z${i + 1} = ${C.fmt(zero)}: |dist| = ${dist.toFixed(4)}\n`;
+        });
+        linhas += `  Produto = ${prodDistZeros.toFixed(4)}\n\n`;
+    } else {
+        linhas += `Sem zeros \u2192 denominador = 1\n\n`;
+        prodDistZeros = 1;
+    }
+
+    // Verifica divisão por zero (s₀ coincidiu com um zero)
+    if (prodDistZeros < 1e-10) {
+        linhas += `⚠ s₀ coincide com um zero → K → ∞`;
+        caixaResultado.className = 'ponto-resultado aviso';
+    } else {
+        const K = prodDistPolos / prodDistZeros;
+        linhas += `K = ${prodDistPolos.toFixed(4)} / ${prodDistZeros.toFixed(4)}\n`;
+        linhas += `K = ${K.toFixed(5)}`;
+        caixaResultado.className = 'ponto-resultado ok';
+    }
+
+    caixaResultado.style.display = 'block';
+    caixaResultado.textContent = linhas;
+}

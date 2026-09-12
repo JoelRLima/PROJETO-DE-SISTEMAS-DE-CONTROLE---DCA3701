@@ -1,0 +1,314 @@
+:root{
+--bg:#0f1117; --s1:#161b22; --s2:#1c2128; --s3:#21262d;
+--b:rgba(99,110,123,.3); --b2:rgba(99,110,123,.55);
+--acc:#58a6ff; --green:#3fb950; --red:#f85149; --amb:#d29922; --pur:#bc8cff;
+--t1:#e6edf3; --t2:#c9d1d9; --t3:#8b949e; --t4:#6e7681;
+--r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--t2);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overscroll-behavior:none}
+body{padding:14px;max-width:500px;margin:0 auto}
+
+/* ---- Header ---- */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.hdr h1{font-size:16px;font-weight:700;color:var(--t1);letter-spacing:.01em}
+.hdr .sub{font-size:11px;color:var(--t4);font-family:'Courier New',monospace;
+background:var(--s2);padding:3px 8px;border-radius:5px;border:1px solid var(--b)}
+
+/* ---- Cards ---- */
+.card{background:var(--s1);border:1px solid var(--b);border-radius:var(--r);
+padding:16px;margin-bottom:12px}
+.lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+color:var(--t4);margin-bottom:12px}
+
+/* ---- Frac display ---- */
+.frac-wrap{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.frac-label{font-size:12px;color:var(--t3);white-space:nowrap}
+.frac{display:inline-flex;flex-direction:column;align-items:center;font-family:'Courier New',monospace;font-size:15px;color:var(--t1)}
+.frac .num{padding-bottom:3px;border-bottom:1.5px solid var(--t3)}
+.frac .den{padding-top:3px}
+
+/* ---- Inputs ---- */
+.field{margin-bottom:11px}
+.field>label{display:block;font-size:11px;font-family:'Courier New',monospace;
+color:var(--t3);margin-bottom:5px}
+.field input{
+width:100%;padding:10px 12px;
+background:var(--bg);border:1.5px solid var(--b);border-radius:8px;
+font-size:15px;font-family:'Courier New',monospace;color:var(--t1);
+outline:none;appearance:none;-webkit-appearance:none;transition:border-color .15s
+}
+.field input:focus{border-color:var(--acc)}
+.field input::placeholder{color:var(--t4);font-size:13px}
+.field .hint{font-size:11px;color:var(--t4);margin-top:4px;font-family:'Courier New',monospace}
+
+/* ---- Examples ---- */
+.exs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.exs-lbl{font-size:10px;color:var(--t4);width:100%}
+.ex{font-size:12px;font-family:'Courier New',monospace;
+padding:6px 10px;background:var(--s2);border:1px solid var(--b);
+border-radius:6px;color:var(--t3);cursor:pointer;transition:all .12s;
+display:flex;flex-direction:column;gap:2px}
+.ex:active{background:var(--b2);color:var(--t1)}
+.ex span{font-size:9px;color:var(--t4)}
+
+/* ---- Primary button ---- */
+.btn-primary{
+width:100%;padding:13px;background:var(--acc);color:#0d1117;
+border:none;border-radius:9px;font-size:15px;font-weight:700;
+cursor:pointer;transition:opacity .12s;letter-spacing:.01em
+}
+.btn-primary:active{opacity:.82}
+
+/* ---- Error ---- */
+.err{background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.4);
+border-radius:8px;padding:10px 13px;font-size:13px;color:var(--red);
+margin-bottom:10px;display:none}
+
+/* ============================================================
+S TEP *UI
+============================================================ */
+#step-wrap{display:none}
+
+/* Progress bar + counter */
+.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.prog-track{flex:1;height:4px;background:var(--s3);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:var(--acc);border-radius:2px;transition:width .3s ease}
+.prog-lbl{font-size:12px;color:var(--t3);font-family:'Courier New',monospace;white-space:nowrap}
+
+/* Step card */
+.step-card{background:var(--s1);border:1.5px solid var(--b);border-radius:var(--r);
+overflow:hidden;margin-bottom:12px}
+.step-top{padding:14px 16px 10px;border-bottom:1px solid var(--b)}
+.step-badge{display:inline-flex;align-items:center;gap:6px;margin-bottom:8px}
+.step-num{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+padding:2px 8px;border-radius:4px;background:var(--acc);color:#0d1117}
+.step-title{font-size:15px;font-weight:600;color:var(--t1);line-height:1.35}
+.step-body{padding:14px 16px;font-size:13px;font-family:'Courier New',monospace;
+color:var(--t2);line-height:1.8;white-space:pre-wrap;word-break:break-word}
+
+/* Result tag */
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;
+text-transform:uppercase;padding:2px 8px;border-radius:4px;margin-bottom:10px}
+.tag-green{background:rgba(63,185,80,.18);color:var(--green);border:1px solid rgba(63,185,80,.35)}
+.tag-amber{background:rgba(210,153,34,.15);color:var(--amb);border:1px solid rgba(210,153,34,.3)}
+
+/* Canvas */
+#cv{display:block;width:100%;border-radius:8px;border:1px solid var(--b)}
+.canvas-wrap{padding:14px 16px}
+
+/* Highlight boxes */
+.hl{background:var(--s2);border-radius:8px;padding:10px 13px;margin-top:10px;
+border-left:3px solid var(--acc);font-size:13px;font-family:'Courier New',monospace;
+color:var(--t1);line-height:1.7;white-space:pre-wrap}
+.hl.green{border-left-color:var(--green)}
+.hl.amber{border-left-color:var(--amb)}
+.hl.red  {border-left-color:var(--red)}
+
+/* Nav buttons */
+.nav{display:flex;gap:10px;margin-top:4px}
+.btn-nav{
+flex:1;padding:13px;border:1.5px solid var(--b);background:var(--s2);
+color:var(--t2);border-radius:9px;font-size:14px;font-weight:600;
+cursor:pointer;transition:all .12s;letter-spacing:.01em
+}
+.btn-nav.next{background:var(--acc);color:#0d1117;border-color:var(--acc)}
+.btn-nav:disabled{opacity:.35;cursor:not-allowed}
+.btn-nav:not(:disabled):active{opacity:.8}
+
+/* Reset */
+.poly-prev{
+min-height:28px;margin-top:6px;padding:7px 12px;
+background:var(--s2);border-radius:7px;border:1px solid var(--b);
+font-family:'Courier New',monospace;font-size:13px;color:var(--acc);
+display:none;line-height:1.5;transition:border-color .15s
+}
+.poly-prev.err{color:var(--red);border-color:rgba(248,81,73,.4)}
+.poly-prev.ok{display:block}
+.poly-prev .deg{font-size:10px;color:var(--t4);margin-bottom:2px;font-family:'Segoe UI',system-ui,sans-serif}
+
+.btn-reset{
+width:100%;padding:11px;background:transparent;border:1px solid var(--b);
+color:var(--t3);border-radius:9px;font-size:13px;cursor:pointer;margin-top:4px;
+transition:all .12s
+}
+.btn-reset:active{background:var(--s2)}
+
+/* Checkmark animation */
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.check{display:inline-block;animation:pop .25s ease}
+
+/* ============================================================
+S EÇÃO* INTERATIVA (Passos 11 e 12)
+Área onde o usuário digita um ponto s₀ = σ + jω
+e o app calcula o ângulo e o ganho K.
+============================================================ */
+
+/* Descrição introdutória do passo */
+.passo-descricao {
+font-size:13px;
+font-family:'Courier New',monospace;
+color:var(--t2);
+line-height:1.8;
+white-space:pre-wrap;
+padding:14px 16px 0;
+}
+
+/* Container do formulário interativo */
+.ponto-form {
+padding:14px 16px;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+/* Linha com dois campos lado a lado: σ e ω */
+.ponto-campos {
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+}
+
+/* Cada campo individual */
+.ponto-campo label {
+display:block;
+font-size:11px;
+font-family:'Courier New',monospace;
+color:var(--t3);
+margin-bottom:5px;
+}
+.ponto-campo input {
+width:100%;
+padding:10px 12px;
+background:var(--bg);
+border:1.5px solid var(--b);
+border-radius:8px;
+font-size:15px;
+font-family:'Courier New',monospace;
+color:var(--t1);
+outline:none;
+appearance:none;
+-webkit-appearance:none;
+transition:border-color .15s;
+}
+.ponto-campo input:focus { border-color:var(--acc) }
+
+/* Nota informativa abaixo dos campos */
+.ponto-nota {
+font-size:11px;
+color:var(--t4);
+font-family:'Courier New',monospace;
+}
+
+/* Botão de calcular */
+.btn-calcular {
+width:100%;
+padding:12px;
+background:var(--acc);
+color:#0d1117;
+border:none;
+border-radius:9px;
+font-size:14px;
+font-weight:700;
+cursor:pointer;
+transition:opacity .12s;
+letter-spacing:.01em;
+}
+.btn-calcular:active { opacity:.82 }
+
+/* Caixa de resultado — muda de cor conforme o resultado */
+.ponto-resultado {
+border-radius:8px;
+padding:12px 14px;
+font-size:13px;
+font-family:'Courier New',monospace;
+line-height:1.8;
+white-space:pre-wrap;
+display:none;            /* oculto até o usuário clicar em Calcular */
+border-left:3px solid var(--acc);
+background:var(--s2);
+color:var(--t1);
+}
+/* Verde = ponto está no LGR / K válido */
+.ponto-resultado.ok   { border-left-color:var(--green) }
+/* Vermelho = ponto NÃO está no LGR */
+.ponto-resultado.fora { border-left-color:var(--red); color:var(--red) }
+/* Amarelo = aviso / caso especial */
+.ponto-resultado.aviso{ border-left-color:var(--amb) }
+
+/* ── Blocos de equação e resultado (usados nos passos HTML) ── */
+
+/* Bloco de equação com borda lateral azul */
+.eq-bloco {
+background: var(--s2);
+border-left: 3px solid var(--acc);
+border-radius: 0 8px 8px 0;
+padding: 10px 14px;
+margin: 8px 0;
+font-family: 'Courier New', monospace;
+font-size: 13px;
+color: var(--t1);
+white-space: pre-wrap;
+line-height: 1.8;
+}
+
+/* Caixa de resultado colorida */
+.res-box {
+border-radius: 8px;
+padding: 10px 14px;
+margin-top: 8px;
+font-family: 'Courier New', monospace;
+font-size: 13px;
+line-height: 1.6;
+white-space: pre-wrap;
+}
+.res-box.verde   { background: rgba(63,185,80,.10);  border: 1px solid rgba(63,185,80,.30);  color: var(--green); }
+.res-box.azul    { background: rgba(88,166,255,.10); border: 1px solid rgba(88,166,255,.30); color: var(--acc);   }
+.res-box.amarelo { background: rgba(210,153,34,.10); border: 1px solid rgba(210,153,34,.30); color: var(--amb);   }
+.res-box.vermelho{ background: rgba(248,81,73,.10);  border: 1px solid rgba(248,81,73,.30);  color: var(--red);   }
+
+/* Subtítulo de seção dentro de um passo */
+.sub-secao {
+font-size: 10px;
+font-weight: 700;
+letter-spacing: .08em;
+text-transform: uppercase;
+color: var(--t4);
+margin: 14px 0 5px;
+}
+
+/* Tabela de Routh */
+.routh-table {
+width: 100%;
+border-collapse: collapse;
+font-family: 'Courier New', monospace;
+font-size: 13px;
+margin: 8px 0;
+}
+.routh-table th {
+color: var(--t3);
+text-align: right;
+padding: 5px 10px 5px 4px;
+font-weight: 400;
+border-right: 1px solid var(--b);
+white-space: nowrap;
+font-size: 12px;
+}
+.routh-table td {
+padding: 5px 10px;
+color: var(--t1);
+text-align: center;
+}
+.routh-table tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+.routh-table tr.linha-critica th,
+.routh-table tr.linha-critica td   { color: var(--amb); }
+
+/* Container de passos com HTML rico */
+.step-body-html {
+padding: 14px 16px;
+font-size: 13px;
+color: var(--t2);
+line-height: 1.75;
+}
+.step-body-html p { margin-bottom: 8px; }
+.step-body-html p:last-child { margin-bottom: 0; }

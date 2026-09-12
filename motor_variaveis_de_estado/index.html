@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>SisCon * Bancada de Projeto de Sistemas de Controle</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <div id="print-export"></div>
+
+  <header class="top">
+    <div class="brand">
+      <span class="mark">SISCON</span>
+      <h1>Bancada de Projeto de Sistemas de Controle</h1>
+    </div>
+    <p class="sub">Motor de cálculo genérico para variáveis de estado: polos &amp; estabilidade,
+      controlabilidade/observabilidade, alocação de polos (Ackermann), observadores, discretização, formas canônicas e
+      seguidores de referência tipo degrau — com o passo a passo de cada projeto.</p>
+  </header>
+
+  <nav id="tabs">
+    <button data-panel="p-exemplos" class="active"><span class="num">★</span>Exemplos</button>
+    <button data-panel="p-analise"><span class="num">01</span>Polos &amp; Estabilidade</button>
+    <button data-panel="p-feedback"><span class="num">02</span>Realimentação K</button>
+    <button data-panel="p-observer"><span class="num">03</span>Observador L</button>
+    <button data-panel="p-discretize"><span class="num">04</span>Discretização</button>
+    <button data-panel="p-canonical"><span class="num">05</span>Formas Canônicas</button>
+    <button data-panel="p-servo"><span class="num">06</span>Seguidor de Referência</button>
+  </nav>
+
+  <main>
+
+    <!-- ============================================================ -->
+    <!-- EXEMPLOS -->
+    <!-- ============================================================ -->
+    <section class="panel active" id="p-exemplos">
+      <div class="card">
+        <h2><span class="tag">★</span>Exemplos prontos</h2>
+        <p class="lead">Clique em "Carregar" para preencher automaticamente o módulo correto com os dados de uma questão
+          e ver a resolução na hora — sem precisar digitar tudo manualmente.</p>
+        <div id="examples-list"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 01 ANALISE -->
+    <!-- ============================================================ -->
+    <section class="panel" id="p-analise">
+      <div class="card">
+        <h2><span class="tag">01</span>Polos, Estabilidade, Controlabilidade e Observabilidade</h2>
+        <p class="lead">Informe o sistema em variáveis de estado (SISO). O motor calcula o polinômio característico via
+          Faddeev–LeVerrier, extrai os polos, monta as matrizes de controlabilidade (W<sub>c</sub>) e observabilidade
+          (W<sub>o</sub>) e avalia seus determinantes/postos.</p>
+
+        <div class="row tight">
+          <div>
+            <label>Domínio</label>
+            <select id="an-domain">
+              <option value="c">Contínuo (s) — ẋ = Ax+Bu</option>
+              <option value="d">Discreto (z) — x(k+1)=Ax(k)+Bu(k)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ordem n</label>
+            <input type="number" id="an-n" min="1" max="6" value="3">
+          </div>
+          <div style="align-self:flex-end; display:flex; gap:6px;">
+            <button class="btn secondary" onclick="rebuildAnalise()">Atualizar campos</button>
+            <button class="btn secondary" onclick="clearAnalise()" title="Zera todas as matrizes e limpa os resultados">Zerar</button>
+          </div>
+        </div>
+
+        <div id="an-matrices"></div>
+
+        <div class="btn-row">
+          <button class="btn" onclick="solveAnalise()">Resolver</button>
+        </div>
+        <div id="an-results"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 02 FEEDBACK -->
+    <!-- ============================================================ -->
+    <section class="panel" id="p-feedback">
+      <div class="card">
+        <h2><span class="tag">02</span>Realimentação de Estados (Fórmula de Ackermann)</h2>
+        <p class="lead">Projeta K, com u = Kx, tal que os autovalores de (A+BK) coincidam com os polos de malha fechada
+          desejados. Vale tanto para A contínuo quanto discreto — a fórmula de Ackermann é a mesma.</p>
+
+        <div class="row tight">
+          <div class="field">
+            <label>Ordem n</label>
+            <input type="number" id="fb-n" min="1" max="6" value="3">
+          </div>
+          <div style="align-self:flex-end; display:flex; gap:6px;">
+            <button class="btn secondary" onclick="rebuildFeedback()">Atualizar campos</button>
+            <button class="btn secondary" onclick="clearFeedback()" title="Zera matrizes, polos e resultados">Zerar</button>
+          </div>
+        </div>
+
+        <div id="fb-matrices"></div>
+
+        <label>Polos de malha fechada desejados <span class="hint">— separe por vírgula (use ponto decimal, não
+            vírgula). Use notação a+bi / a-bi para complexos. Ex: -0.5+0.5i, -0.5-0.5i, 0.5</span></label>
+        <input type="text" id="fb-poles" value="-0.5+0.5i, -0.5-0.5i, 0.5">
+
+        <div class="btn-row">
+          <button class="btn" onclick="solveFeedback()">Resolver</button>
+        </div>
+        <div id="fb-results"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 03 OBSERVER -->
+    <!-- ============================================================ -->
+    <section class="panel" id="p-observer">
+      <div class="card">
+        <h2><span class="tag">03</span>Projeto de Observador de Estados (Ackermann dual)</h2>
+        <p class="lead">Projeta L tal que os autovalores de (A−LC) coincidam com os polos do observador desejados. O
+          observador estima x̂ a partir de y e u: x̂̇ = Ax̂+Bu+L(y−Cx̂).</p>
+
+        <div class="row tight">
+          <div class="field">
+            <label>Ordem n</label>
+            <input type="number" id="ob-n" min="1" max="6" value="3">
+          </div>
+          <div style="align-self:flex-end; display:flex; gap:6px;">
+            <button class="btn secondary" onclick="rebuildObserver()">Atualizar campos</button>
+            <button class="btn secondary" onclick="clearObserver()" title="Zera matrizes, polos e resultados">Zerar</button>
+          </div>
+        </div>
+
+        <div id="ob-matrices"></div>
+
+        <label>Polos do observador desejados <span class="hint">— separados por vírgula (ponto decimal). Ex: 0.9+0.1i,
+            0.9-0.1i, 0.1</span></label>
+        <input type="text" id="ob-poles" value="0.9+0.1i, 0.9-0.1i, 0.1">
+
+        <div class="btn-row">
+          <button class="btn" onclick="solveObserver()">Resolver</button>
+        </div>
+        <div id="ob-results"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 04 DISCRETIZE -->
+    <!-- ============================================================ -->
+    <section class="panel" id="p-discretize">
+      <div class="card">
+        <h2><span class="tag">04</span>Discretização (ẋ=Ax+Bu → x(k+1)=Gx(k)+Hu(k))</h2>
+        <p class="lead">Calcula G = e<sup>AT</sup> e H = ∫₀ᵀ e<sup>Aτ</sup>dτ · B através da exponencial da matriz
+          aumentada [[AT,BT],[0,0]] (válido mesmo quando A é singular).</p>
+
+        <div class="row tight">
+          <div class="field">
+            <label>Ordem n</label>
+            <input type="number" id="dz-n" min="1" max="6" value="2">
+          </div>
+          <div class="field">
+            <label>Período T (s)</label>
+            <input type="text" id="dz-T" value="1">
+          </div>
+          <div style="align-self:flex-end; display:flex; gap:6px;">
+            <button class="btn secondary" onclick="rebuildDiscretize()">Atualizar campos</button>
+            <button class="btn secondary" onclick="clearDiscretize()" title="Zera matrizes, T e resultados">Zerar</button>
+          </div>
+        </div>
+
+        <div id="dz-matrices"></div>
+
+        <div class="btn-row">
+          <button class="btn" onclick="solveDiscretize()">Resolver</button>
+        </div>
+        <div id="dz-results"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 05 CANONICAL -->
+    <!-- ============================================================ -->
+    <section class="panel" id="p-canonical">
+      <div class="card">
+        <h2><span class="tag">05</span>Formas Canônicas Controlável e Observável</h2>
+        <p class="lead">Escolha a origem dos dados: função de transferência G(s) (ou G(z)) ou um modelo em variáveis de
+          estado já existente.</p>
+
+        <div class="row tight">
+          <div>
+            <label>Origem dos dados</label>
+            <select id="cn-mode" onchange="toggleCanonicalMode()">
+              <option value="tf">Função de transferência G(s)</option>
+              <option value="ss">Variáveis de estado (A,B,C)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="cn-tf-block">
+          <p class="muted">Informe os coeficientes do numerador e do denominador, do maior para o menor grau. O
+            denominador deve ser mônico (coeficiente líder = 1) e seu grau define n.</p>
+          <div class="row">
+            <div>
+              <label>Denominador (grau n, mônico) <span class="hint">ex: 1, 3, 7, 5 → s³+3s²+7s+5 — separe por vírgula,
+                  use ponto decimal (ex: 0.5, não 0,5)</span></label>
+              <input type="text" id="cn-den" value="1, 1, 0">
+            </div>
+            <div>
+              <label>Numerador (grau ≤ n−1) <span class="hint">ex: 3, -2 → 3s−2 — ponto decimal</span></label>
+              <input type="text" id="cn-num" value="3, -2">
+            </div>
+          </div>
+        </div>
+
+        <div id="cn-ss-block" style="display:none;">
+          <div class="row tight">
+            <div class="field">
+              <label>Ordem n</label>
+              <input type="number" id="cn-n" min="1" max="6" value="3">
+            </div>
+            <div style="align-self:flex-end; display:flex; gap:6px;">
+              <button class="btn secondary" onclick="rebuildCanonicalSS()">Atualizar campos</button>
+              <button class="btn secondary" onclick="clearCanonicalSS()" title="Zera matrizes e resultados">Zerar</button>
+            </div>
+          </div>
+          <div id="cn-matrices"></div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn" onclick="solveCanonical()">Resolver</button>
+        </div>
+        <div id="cn-results"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 06 SERVO -->
+    <!-- ============================================================ -->
+    <section class="panel" id="p-servo">
+      <div class="card">
+        <h2><span class="tag">06</span>Seguidor de Referência — Entrada Tipo Degrau</h2>
+        <p class="lead">Projeta o controlador com ação integral para seguimento de referência tipo degrau, com erro nulo
+          em regime permanente. Suporta sistemas contínuos e discretos, e as convenções do formulário oficial da
+          disciplina (UFRN) ou da literatura alternativa (Ogata/Franklin).</p>
+
+        <div class="row tight">
+          <div>
+            <label>Domínio</label>
+            <select id="sv-domain" onchange="onServoDomainChange()">
+              <option value="c">Contínuo (s) — sistema (A, B, C)</option>
+              <option value="d">Discreto (z) — sistema (G, H, C)</option>
+            </select>
+          </div>
+          <div>
+            <label>Convenção / Método</label>
+            <select id="sv-convention">
+              <option value="ufrn">UFRN (formulário oficial): K_a = [0…1]·W_a⁻¹·q_c; u = −k₁∫e dt − K₂x</option>
+              <option value="alt">Alternativo (Ogata): K_a = −[0…1]·W_a⁻¹·q_c; u = k₁∫(r−y)dt + K₂x</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ordem n</label>
+            <input type="number" id="sv-n" min="1" max="6" value="2">
+          </div>
+          <div style="align-self:flex-end; display:flex; gap:6px;">
+            <button class="btn secondary" onclick="rebuildServo()">Atualizar campos</button>
+            <button class="btn secondary" onclick="clearServo()" title="Zera matrizes, polos e resultados">Zerar</button>
+          </div>
+        </div>
+
+        <div id="sv-matrices"></div>
+
+        <label>Polos de malha fechada desejados (n+1 polos) <span class="hint">separados por vírgula, ponto
+            decimal</span></label>
+        <input type="text" id="sv-poles" value="0.5+0.2i, 0.5-0.2i, -0.1">
+
+        <div class="btn-row">
+          <button class="btn" onclick="solveServo()">Resolver</button>
+        </div>
+        <div id="sv-results"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    Todo o cálculo roda localmente no navegador (sem envio de dados). Os algoritmos são genéricos - funcionam para
+    qualquer sistema SISO de ordem razoável (n ≤ 6). Use ponto como separador decimal.
+  </footer>
+
+  <script src="script.js"></script>
+
+</body>
+
+</html>
